@@ -1,0 +1,66 @@
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  line-height: 1;
+  text-transform: capitalize;
+  border: 1px solid transparent;
+  width: fit-content;
+}
+
+.status-pill__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: currentColor;
+}
+
+.status-pill--sm {
+  padding: 2px 8px;
+  font-size: 11px;
+}
+
+.status-pill--lg {
+  padding: 6px 14px;
+  font-size: var(--font-size-sm);
+}
+
+/* Status variants */
+.status-pill--healthy,
+.status-pill--resolved {
+  background-color: var(--color-success-bg);
+  color: var(--color-success-text);
+  border-color: var(--color-success-border);
+}
+
+.status-pill--degraded,
+.status-pill--under-review,
+.status-pill--draft {
+  background-color: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  border-color: var(--color-warning-border);
+}
+
+.status-pill--unhealthy,
+.status-pill--rejected {
+  background-color: var(--color-danger-bg);
+  color: var(--color-danger-text);
+  border-color: var(--color-danger-border);
+}
+
+.status-pill--open,
+.status-pill--in-progress {
+  background-color: var(--color-info-bg);
+  color: var(--color-info-text);
+  border-color: var(--color-info-border);
+}
+
+.status-pill--closed {
+  background-color: var(--color-border-subtle);
+  color: var(--color-text-muted);
+  border-color: var(--color-border);
+}
