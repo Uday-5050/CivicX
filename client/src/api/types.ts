@@ -42,6 +42,42 @@ export interface HealthData {
   mongo?: 'connected' | 'disconnected';
 }
 
+export type AnalysisStatus = 'pending' | 'completed' | 'failed';
+export type SubmissionStatus = 'draft' | 'submitted' | 'under_review' | 'resolved';
+
+export interface SubmissionAttachment {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  previewUrl?: string;
+}
+
+export interface SubmissionAnalysis {
+  status: AnalysisStatus;
+  category?: string;
+  priority?: 'low' | 'medium' | 'high';
+  summary?: string;
+  error?: string;
+}
+
+export interface Submission {
+  id: string;
+  idempotencyKey: string;
+  title: string;
+  description: string;
+  domain: string;
+  location: string;
+  submitterType: Role;
+  attachments: SubmissionAttachment[];
+  status: SubmissionStatus;
+  analysis: SubmissionAnalysis;
+  comments: number;
+  upvotes: number;
+  hasUpvoted: boolean;
+  createdAt: string;
+}
+
 export class ApiError extends Error {
   code: string;
   details?: ErrorDetail[];
