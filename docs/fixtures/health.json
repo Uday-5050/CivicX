@@ -1,0 +1,32 @@
+{
+  "healthSuccess": {
+    "success": true,
+    "data": {
+      "status": "healthy",
+      "timestamp": "2025-09-06T10:30:00.000Z",
+      "uptime": 3600,
+      "environment": "development",
+      "version": "1.0.0",
+      "mongo": "connected"
+    },
+    "meta": {
+      "requestId": "550e8400-e29b-41d4-a716-446655440000",
+      "timestamp": "2025-09-06T10:30:00.000Z"
+    }
+  },
+  "healthDegraded": {
+    "success": true,
+    "data": {
+      "status": "degraded",
+      "timestamp": "2025-09-06T10:30:00.000Z",
+      "uptime": 7200,
+      "environment": "development",
+      "version": "1.0.0",
+      "mongo": "disconnected"
+    },
+    "meta": {
+      "requestId": "660e8400-e29b-41d4-a716-446655440001",
+      "timestamp": "2025-09-06T10:30:00.000Z"
+    }
+  }
+}
