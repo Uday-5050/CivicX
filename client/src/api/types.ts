@@ -190,6 +190,43 @@ export interface InstitutionMember {
   status: 'active' | 'suspended';
 }
 
+export type AdminAccountStatus = 'pending' | 'active' | 'suspended';
+export type ModerationStatus = 'open' | 'resolved' | 'dismissed';
+
+export interface AdminInstitution {
+  id: string;
+  name: string;
+  type: 'university' | 'industry';
+  accountStatus: AdminAccountStatus;
+  createdAt: string;
+  users: number;
+}
+
+export interface AdminModerationItem {
+  id: string;
+  title: string;
+  reason: string;
+  reporter: string;
+  status: ModerationStatus;
+  createdAt: string;
+}
+
+export interface AdminAuditEvent {
+  id: string;
+  action: string;
+  actor: string;
+  target: string;
+  createdAt: string;
+}
+
+export interface AdminReportRow {
+  id: string;
+  domain: string;
+  district: string;
+  status: string;
+  count: number;
+}
+
 export class ApiError extends Error {
   code: string;
   details?: ErrorDetail[];

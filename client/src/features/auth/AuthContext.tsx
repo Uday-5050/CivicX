@@ -27,6 +27,8 @@ type AuthContextType = {
 const USER_KEY = 'civicx_user'
 const DEMO_EMAIL = 'citizen@civicx.test'
 const DEMO_PASSWORD = 'CivicX@123'
+const DEMO_ADMIN_EMAIL = 'admin@civicx.test'
+const DEMO_ADMIN_PASSWORD = 'Admin@123'
 const PASSWORD_KEY = 'civicx_password'
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
@@ -56,7 +58,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (password.length < 8) return { ok: false, message: 'Password must be at least 8 characters.' }
     if (email.toLowerCase() !== DEMO_EMAIL && !email.includes('@')) return { ok: false, message: 'Enter a valid email address.' }
     if (email.toLowerCase() === DEMO_EMAIL && password !== DEMO_PASSWORD) return { ok: false, message: 'Invalid email or password.' }
-    if (role === ROLES.ADMIN) return { ok: false, message: 'Administrator access is invitation-only.' }
+    if (role === ROLES.ADMIN && (email.toLowerCase() !== DEMO_ADMIN_EMAIL || password !== DEMO_ADMIN_PASSWORD)) return { ok: false, message: 'Invalid administrator credentials.' }
     saveSession({ id: 'usr_demo_001', name: 'Aarav Kumar', email, role, status: role === ROLES.UNIVERSITY || role === ROLES.INDUSTRY ? 'pending' : 'approved' }, email.toLowerCase() === DEMO_EMAIL ? DEMO_PASSWORD : password)
     return { ok: true }
   }
