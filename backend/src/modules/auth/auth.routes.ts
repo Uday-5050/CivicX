@@ -1,0 +1,13 @@
+import { Router } from "express";
+import { validate } from "../../middleware/validate";
+import { approveOnboarding, forgotPassword, me, mobileLogin, mobileLogout, mobileRefresh, onboard, register, resetPassword, webLogin, webLogout, webRefresh } from "./auth.controller";
+import { requireAuth, requireRole } from "./auth.middleware";
+import { forgotPasswordSchema, loginSchema, onboardingSchema, refreshSchema, registerSchema, resetPasswordSchema } from "./auth.schemas";
+const router = Router();
+router.post("/register", validate(registerSchema), register);
+router.post("/onboard-request", validate(onboardingSchema), onboard);
+router.post("/web/login", validate(loginSchema), webLogin); router.post("/web/refresh", webRefresh); router.post("/web/logout", webLogout);
+router.post("/mobile/login", validate(loginSchema), mobileLogin); router.post("/mobile/refresh", validate(refreshSchema), mobileRefresh); router.post("/mobile/logout", validate(refreshSchema), mobileLogout);
+router.get("/me", requireAuth, me); router.post("/forgot-password", validate(forgotPasswordSchema), forgotPassword); router.post("/reset-password", validate(resetPasswordSchema), resetPassword);
+router.patch("/onboarding/:id/approve", requireAuth, requireRole("admin"), approveOnboarding);
+export default router;

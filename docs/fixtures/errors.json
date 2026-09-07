@@ -1,0 +1,56 @@
+{
+  "validationError": {
+    "success": false,
+    "error": {
+      "code": "VALIDATION_ERROR",
+      "message": "Request validation failed",
+      "details": [
+        { "field": "title", "message": "Title is required" },
+        { "field": "description", "message": "Description must be at least 10 characters" }
+      ]
+    },
+    "meta": {
+      "requestId": "550e8400-e29b-41d4-a716-446655440000"
+    }
+  },
+  "notFound": {
+    "success": false,
+    "error": {
+      "code": "NOT_FOUND",
+      "message": "The requested resource was not found"
+    },
+    "meta": {
+      "requestId": "550e8400-e29b-41d4-a716-446655440001"
+    }
+  },
+  "unauthorized": {
+    "success": false,
+    "error": {
+      "code": "UNAUTHORIZED",
+      "message": "Authentication is required"
+    },
+    "meta": {
+      "requestId": "550e8400-e29b-41d4-a716-446655440002"
+    }
+  },
+  "forbidden": {
+    "success": false,
+    "error": {
+      "code": "FORBIDDEN",
+      "message": "You do not have permission to perform this action"
+    },
+    "meta": {
+      "requestId": "550e8400-e29b-41d4-a716-446655440003"
+    }
+  },
+  "internalError": {
+    "success": false,
+    "error": {
+      "code": "INTERNAL_ERROR",
+      "message": "An unexpected error occurred"
+    },
+    "meta": {
+      "requestId": "550e8400-e29b-41d4-a716-446655440004"
+    }
+  }
+}

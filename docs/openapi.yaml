@@ -1,0 +1,278 @@
+openapi: "3.1.0"
+info:
+  title: CivicX API
+  version: "1.0.0"
+  description: |
+    CivicX — Civic engagement platform API.
+    Shared contract between web (React), mobile (Flutter) and backend (Node/Express/TypeScript).
+  contact:
+    name: CivicX Backend Team
+
+servers:
+  - url: http://localhost:5000
+    description: Local development
+  - url: https://api.civicx.com
+    description: Production (future)
+
+# ──────────────────────────────────────────────
+# Reusable components
+# ──────────────────────────────────────────────
+components:
+  schemas:
+    # ── Enums ──────────────────────────────────
+    Role:
+      type: string
+      enum:
+        - citizen
+        - university
+        - industry
+        - admin
+      description: User roles across the platform.
+
+    IssueStatus:
+      type: string
+      enum:
+        - draft
+        - open
+        - under_review
+        - in_progress
+        - resolved
+        - closed
+        - rejected
+      description: Lifecycle statuses for a civic issue.
+
+    IssuePriority:
+      type: string
+      enum:
+        - low
+        - medium
+        - high
+        - critical
+
+    IssueCategory:
+      type: string
+      enum:
+        - infrastructure
+        - safety
+        - environment
+        - transportation
+        - community
+        - education
+        - health
+        - governance
+        - other
+
+    # ── Standard envelopes ─────────────────────
+    SuccessResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          description: Response payload (varies by endpoint).
+        meta:
+          type: object
+          properties:
+            requestId:
+              type: string
+              format: uuid
+            timestamp:
+              type: string
+              format: date-time
+
+    ErrorResponse:
+      type: object
+      required:
+        - success
+        - error
+      properties:
+        success:
+          type: boolean
+          const: false
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              description: Machine-readable error code.
+            message:
+              type: string
+              description: Human-readable error message.
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                  message:
+                    type: string
+        meta:
+          type: object
+          properties:
+            requestId:
+              type: string
+              format: uuid
+
+    # ── Health ─────────────────────────────────
+    HealthData:
+      type: object
+      required:
+        - status
+        - timestamp
+        - uptime
+        - environment
+      properties:
+        status:
+          type: string
+          enum:
+            - healthy
+            - degraded
+            - unhealthy
+        timestamp:
+          type: string
+          format: date-time
+        uptime:
+          type: number
+          description: Server uptime in seconds.
+        environment:
+          type: string
+          enum:
+            - development
+            - staging
+            - production
+        version:
+          type: string
+        mongo:
+          type: string
+          enum:
+            - connected
+            - disconnected
+
+  # ── Shared parameters ──────────────────────
+  parameters:
+    RequestId:
+      name: X-Request-Id
+      in: header
+      required: false
+      schema:
+        type: string
+        format: uuid
+      description: Client-supplied or server-generated request correlation ID.
+
+  # ── Shared responses ──────────────────────
+  responses:
+    BadRequest:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            error:
+              code: VALIDATION_ERROR
+              message: "Request validation failed"
+              details:
+                - field: "title"
+                  message: "Title is required"
+            meta:
+              requestId: "550e8400-e29b-41d4-a716-446655440000"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            error:
+              code: NOT_FOUND
+              message: "The requested resource was not found"
+            meta:
+              requestId: "550e8400-e29b-41d4-a716-446655440000"
+
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            error:
+              code: UNAUTHORIZED
+              message: "Authentication is required"
+
+    InternalError:
+      description: Server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            error:
+              code: INTERNAL_ERROR
+              message: "An unexpected error occurred"
+
+# ──────────────────────────────────────────────
+# Paths
+# ──────────────────────────────────────────────
+paths:
+  /api/health:
+    get:
+      operationId: getHealth
+      summary: Health check
+      description: Returns backend health status. Used by all clients and monitoring.
+      tags:
+        - Health
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+      responses:
+        "200":
+          description: Backend is healthy
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/HealthData"
+              example:
+                success: true
+                data:
+                  status: healthy
+                  timestamp: "2025-09-06T10:30:00.000Z"
+                  uptime: 3600
+                  environment: development
+                  version: "1.0.0"
+                  mongo: connected
+                meta:
+                  requestId: "550e8400-e29b-41d4-a716-446655440000"
+                  timestamp: "2025-09-06T10:30:00.000Z"
+        "503":
+          description: Backend is unhealthy
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/HealthData"
+
+tags:
+  - name: Health
+    description: System health and readiness endpoints

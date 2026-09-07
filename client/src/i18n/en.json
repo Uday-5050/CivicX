@@ -1,0 +1,47 @@
+{
+  "app": {
+    "title": "CivicX",
+    "subtitle": "Jharkhand Societal Innovation Platform",
+    "gov_title": "Government of Jharkhand",
+    "helpline": "Helpline: 1800-345-6789"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "health": "System Health",
+    "issues": "Civic Issues",
+    "profile": "Profile & Settings"
+  },
+  "roles": {
+    "citizen": "Citizen",
+    "university": "University",
+    "industry": "Industry",
+    "admin": "State Admin"
+  },
+  "health": {
+    "title": "Backend Health & Readiness",
+    "status": "System Status",
+    "uptime": "Uptime",
+    "environment": "Environment",
+    "database": "Database Status",
+    "requestId": "Correlation ID",
+    "timestamp": "Reported At",
+    "healthy": "Operational",
+    "degraded": "Degraded",
+    "unhealthy": "Offline"
+  },
+  "status": {
+    "draft": "Draft",
+    "open": "Open",
+    "under_review": "Under Review",
+    "in_progress": "In Progress",
+    "resolved": "Resolved",
+    "closed": "Closed",
+    "rejected": "Rejected"
+  },
+  "actions": {
+    "switch_role": "Switch Role",
+    "refresh": "Refresh",
+    "retry": "Retry",
+    "save": "Save Changes"
+  }
+}
