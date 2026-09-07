@@ -78,6 +78,38 @@ export interface Submission {
   createdAt: string;
 }
 
+export type ChallengePriority = 'low' | 'medium' | 'high';
+export type ChallengeDecision = 'pending' | 'accepted' | 'declined' | 'info_requested';
+
+export interface ProjectMember {
+  id: string;
+  name: string;
+  role: 'mentor' | 'student';
+  department: string;
+  email: string;
+}
+
+export interface UniversityChallenge {
+  id: string;
+  title: string;
+  summary: string;
+  domain: string;
+  priority: ChallengePriority;
+  department: string;
+  organization: string;
+  feasibilityNotes: string[];
+  decision: ChallengeDecision;
+  version: number;
+  members: ProjectMember[];
+  proposal?: {
+    approach: string;
+    timeline: string;
+    mentorId: string;
+    studentIds: string[];
+  };
+  createdAt: string;
+}
+
 export class ApiError extends Error {
   code: string;
   details?: ErrorDetail[];
