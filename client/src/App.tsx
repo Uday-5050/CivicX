@@ -5,9 +5,11 @@ import { useAuth } from './features/auth/AuthContext'
 import { ROLE_LABELS, ROLES, type Role } from './constants/roles'
 import SubmissionWorkspace from './components/Submissions/SubmissionWorkspace'
 import UniversityInbox from './components/University/UniversityInbox'
+import IndustryWorkspace from './components/Industry/IndustryWorkspace'
+import UniversityCollaborationRequests from './components/University/UniversityCollaborationRequests'
 import './App.css'
 
-type Route = '/' | '/login' | '/register' | '/institution' | '/forgot-password' | '/reset-password' | '/home' | '/submit' | '/university'
+type Route = '/' | '/login' | '/register' | '/institution' | '/forgot-password' | '/reset-password' | '/home' | '/submit' | '/university' | '/industry'
 const route = (): Route => (window.location.hash.replace('#', '') as Route) || '/'
 const go = (next: Route) => { window.location.hash = next }
 
@@ -19,9 +21,9 @@ function AuthLayout({ children, eyebrow, title, copy }: { children: ReactNode; e
   return <main className="auth-page"><div className="auth-art" aria-hidden="true"><Threads color={[0.38, 0.72, 1]} amplitude={1.1} distance={0.12} enableMouseInteraction /><div className="auth-art-wash" /></div><header className="auth-header"><Brand /><a href="#/" className="back-link">Back to CivicX <span>↗</span></a></header><section className="auth-layout"><div className="auth-intro"><p className="eyebrow"><span /> {eyebrow}</p><h1>{title}</h1><p>{copy}</p></div><div className="auth-panel">{children}</div></section></main>
 }
 
-function Login() {
+function Login({ initialRole = ROLES.CITIZEN }: { initialRole?: Role }) {
   const { login } = useAuth()
-  const [role, setRole] = useState<Role>(ROLES.CITIZEN)
+  const [role, setRole] = useState<Role>(initialRole)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -48,6 +50,7 @@ function Home() {
   const { user, logout } = useAuth()
   if (!user) { go('/login'); return null }
   if (user.role === ROLES.UNIVERSITY) return <UniversityPage />
+  if (user.role === ROLES.INDUSTRY) return <IndustryPage />
   const pending = user.status === 'pending'
   return <main className="home-page"><header className="home-header"><Brand /><div className="home-account"><span>{user.name}</span><button type="button" onClick={() => { logout(); go('/') }}>Sign out</button></div></header><section className="home-content"><p className="eyebrow"><span /> {ROLE_LABELS[user.role]} workspace</p><h1>Hello, {user.name.split(' ')[0]}.</h1><p className="home-lead">{pending ? 'Your institution profile is under review. We will notify you when it is approved.' : 'Your civic journey starts here. What would you like to do today?'}</p><div className="home-grid"><article><span className="tile-number">01</span><h2>Raise a request</h2><p>Share an issue or idea with the people who can help.</p><button type="button" onClick={() => go('/submit')}>Start a request →</button></article><article><span className="tile-number">02</span><h2>Track progress</h2><p>See updates from your community and institutions.</p><button type="button" onClick={() => go('/submit')}>View activity →</button></article><article><span className="tile-number">03</span><h2>Your profile</h2><p>Keep your contact details and preferences current.</p><button type="button">Manage profile →</button></article></div></section></main>
 }
@@ -61,7 +64,13 @@ function SubmissionPage() {
 function UniversityPage() {
   const { user, logout } = useAuth()
   if (!user || user.role !== ROLES.UNIVERSITY) { go('/login'); return null }
-  return <main className="home-page"><header className="home-header"><Brand /><div className="home-account"><a href="#/home">Dashboard</a><span>{user.name}</span><button type="button" onClick={() => { logout(); go('/') }}>Sign out</button></div></header><UniversityInbox /></main>
+  return <main className="home-page"><header className="home-header"><Brand /><div className="home-account"><a href="#/home">Dashboard</a><span>{user.name}</span><button type="button" onClick={() => { logout(); go('/') }}>Sign out</button></div></header><UniversityInbox /><UniversityCollaborationRequests /></main>
+}
+
+function IndustryPage() {
+  const { user, logout } = useAuth()
+  if (!user || user.role !== ROLES.INDUSTRY) return <Login initialRole={ROLES.INDUSTRY} />
+  return <main className="home-page"><header className="home-header"><Brand /><div className="home-account"><a href="#/home">Dashboard</a><span>{user.name}</span><button type="button" onClick={() => { logout(); go('/') }}>Sign out</button></div></header><IndustryWorkspace /></main>
 }
 
   function Landing() { return <main className="landing-page"><div className="landing-canvas" aria-hidden="true"><Threads color={[0.38, 0.72, 1]} amplitude={1.15} distance={0.12} enableMouseInteraction /></div><div className="landing-wash" aria-hidden="true" /><nav className="site-nav" aria-label="Main navigation"><Brand /><div className="nav-links"><a href="#services">Services</a><a href="#about">About CivicX</a></div><a className="nav-login" href="#/login">Sign in <span>↗</span></a></nav><section className="hero-copy" id="about"><p className="eyebrow"><span /> समस्या से समाधान तक</p><h1>From problems to solutions,<br /><em>CivicX is with you.</em></h1><p className="hero-description">Access public services, follow your requests, and build a better community from one trusted place.</p><div className="hero-actions"><a className="btn btn-primary" href="#/register">Get started <span>→</span></a><a className="text-link" href="#/login">Already registered? <strong>Sign in</strong></a></div></section><section className="service-bar" id="services" aria-label="CivicX services"><div className="service-intro"><span className="live-dot" /> Your civic space</div><div className="service-item"><span>01</span><strong>Raise a request</strong><small>Be heard, be counted</small></div><div className="service-item"><span>02</span><strong>Track progress</strong><small>Stay in the loop</small></div><div className="service-item"><span>03</span><strong>Shape tomorrow</strong><small>Take part locally</small></div></section></main> }
@@ -74,6 +83,7 @@ export default function App() {
   if (currentRoute === '/home') return <Home />
   if (currentRoute === '/submit') return <SubmissionPage />
   if (currentRoute === '/university') return <UniversityPage />
+  if (currentRoute === '/industry') return <IndustryPage />
   if (currentRoute === '/login') return <Login />
   if (currentRoute === '/register') return <Register />
   if (currentRoute === '/institution') return <Register institution />

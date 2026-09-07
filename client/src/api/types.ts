@@ -110,6 +110,35 @@ export interface UniversityChallenge {
   createdAt: string;
 }
 
+export type CollaborationType = 'mentorship' | 'funding' | 'prototyping' | 'deployment' | 'technology_transfer';
+export type CollaborationRequestStatus = 'pending' | 'accepted' | 'declined';
+
+export interface CollaborationRequest {
+  id: string;
+  projectId: string;
+  projectTitle: string;
+  organization: string;
+  collaborationType: CollaborationType;
+  message: string;
+  status: CollaborationRequestStatus;
+  version: number;
+  createdAt: string;
+}
+
+export interface IndustryProject {
+  id: string;
+  title: string;
+  summary: string;
+  domain: string;
+  university: string;
+  department: string;
+  milestone: string;
+  status: 'open' | 'in_progress' | 'pilot_ready';
+  needs: CollaborationType[];
+  members: ProjectMember[];
+  accessGrantedTo: string[];
+}
+
 export class ApiError extends Error {
   code: string;
   details?: ErrorDetail[];
