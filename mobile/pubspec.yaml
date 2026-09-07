@@ -1,0 +1,31 @@
+name: civix_mobile
+description: Citizen mobile app for the Civix societal challenge platform.
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  dio: ^5.7.0
+  flutter_riverpod: ^2.6.1
+  go_router: ^14.6.2
+  image_picker: ^1.1.2
+  file_picker: ^12.2.0
+  geolocator: ^13.0.2
+  flutter_secure_storage: ^11.0.0
+  sqflite: ^2.4.1
+  path: ^1.9.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/branding/civix_logo.jpeg
