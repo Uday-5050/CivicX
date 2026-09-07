@@ -139,6 +139,57 @@ export interface IndustryProject {
   accessGrantedTo: string[];
 }
 
+export type MilestoneStatus = 'completed' | 'current' | 'upcoming' | 'blocked';
+
+export interface ProjectMilestone {
+  id: string;
+  title: string;
+  description: string;
+  status: MilestoneStatus;
+  dueDate: string;
+  owner: string;
+}
+
+export interface ProjectRecord {
+  id: string;
+  title: string;
+  detail: string;
+  author: string;
+  createdAt: string;
+}
+
+export interface ProjectBoard {
+  id: string;
+  title: string;
+  summary: string;
+  version: number;
+  milestones: ProjectMilestone[];
+  deliverables: ProjectRecord[];
+  ipDisclosures: ProjectRecord[];
+  testRecords: ProjectRecord[];
+  updatedAt: string;
+}
+
+export type NotificationType = 'project' | 'submission' | 'system';
+
+export interface CivicNotification {
+  id: string;
+  userId: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface InstitutionMember {
+  id: string;
+  name: string;
+  email: string;
+  role: 'staff' | 'mentor' | 'student';
+  status: 'active' | 'suspended';
+}
+
 export class ApiError extends Error {
   code: string;
   details?: ErrorDetail[];
