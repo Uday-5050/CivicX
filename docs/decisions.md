@@ -45,7 +45,7 @@ This document records key architectural decisions for the CivicX backend.
 
 **Decision:** Organize code by domain module:
 ```
-backend/src/
+server/backend/src/
 ├── modules/       ← Feature domains (health, issues, users, etc.)
 ├── middleware/     ← Express middleware (cross-cutting)
 ├── adapters/       ← External service integrations (AI, email, etc.)
@@ -70,7 +70,7 @@ Each module contains its own routes, controller, service, model, and validation 
 
 **Context:** The prompt specifies AI starts as an adapter inside the backend. No fourth developer or Python service required.
 
-**Decision:** AI functionality lives in `backend/src/adapters/ai/`. Initially it is a stub that returns mock responses. When ready, it will call external AI APIs (e.g., Google Gemini, OpenAI) through this adapter.
+**Decision:** AI functionality lives in `server/backend/src/adapters/ai/`. Initially it is a stub that returns mock responses. When ready, it will call external AI APIs (e.g., Google Gemini, OpenAI) through this adapter.
 
 **Consequences:**
 - No external AI service dependency for Task 01

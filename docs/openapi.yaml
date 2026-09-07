@@ -156,6 +156,67 @@ components:
             - connected
             - disconnected
 
+    AuthUser:
+      type: object
+      required: [id, name, email, role, accountStatus, language]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        email: { type: string, format: email }
+        role: { $ref: "#/components/schemas/Role" }
+        accountStatus: { type: string, enum: [pending, active, suspended] }
+        institutionId: { type: [string, "null"] }
+        phone: { type: string }
+        language: { type: string, enum: [en, hi] }
+
+    RegisterRequest:
+      type: object
+      required: [name, email, password]
+      properties:
+        name: { type: string, minLength: 2, maxLength: 120 }
+        email: { type: string, format: email, maxLength: 254 }
+        password: { type: string, minLength: 8, maxLength: 128 }
+        phone: { type: string, maxLength: 30 }
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+        password: { type: string, minLength: 1, maxLength: 128 }
+
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken: { type: string, minLength: 32, maxLength: 512 }
+
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+
+    ResetPasswordRequest:
+      type: object
+      required: [token, password]
+      properties:
+        token: { type: string, minLength: 32, maxLength: 512 }
+        password: { type: string, minLength: 8, maxLength: 128 }
+
+    OnboardingRequest:
+      type: object
+      required: [name, email, password, institutionName, institutionType, domains, registrationNumber, contactPhone]
+      properties:
+        name: { type: string, minLength: 2, maxLength: 120 }
+        email: { type: string, format: email, maxLength: 254 }
+        password: { type: string, minLength: 8, maxLength: 128 }
+        institutionName: { type: string, minLength: 2, maxLength: 200 }
+        institutionType: { type: string, enum: [university, industry] }
+        domains: { type: array, minItems: 1, maxItems: 20, items: { type: string, minLength: 2, maxLength: 80 } }
+        registrationNumber: { type: string, minLength: 2, maxLength: 100 }
+        contactPhone: { type: string, minLength: 5, maxLength: 30 }
+
   # ── Shared parameters ──────────────────────
   parameters:
     RequestId:
@@ -228,6 +289,133 @@ components:
 # Paths
 # ──────────────────────────────────────────────
 paths:
+  /api/auth/register:
+    post:
+      operationId: registerCitizen
+      summary: Register a citizen account
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/RegisterRequest" } } }
+      responses:
+        "201": { description: Citizen registered }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { description: Email already registered }
+  /api/auth/onboard-request:
+    post:
+      operationId: createOnboardingRequest
+      summary: Submit an institution onboarding request
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/OnboardingRequest" } } }
+      responses:
+        "201": { description: Pending institution request created }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { description: Email already registered }
+  /api/auth/web/login:
+    post:
+      operationId: webLogin
+      summary: Sign in a web client
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/LoginRequest" } } }
+      responses:
+        "200": { description: Access token returned and refresh cookie set }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: Account pending approval or suspended }
+  /api/auth/web/refresh:
+    post:
+      operationId: webRefresh
+      summary: Rotate the web refresh cookie
+      tags: [Authentication]
+      responses:
+        "200": { description: Rotated access token and refresh cookie }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/auth/web/logout:
+    post:
+      operationId: webLogout
+      summary: Revoke the web refresh cookie
+      tags: [Authentication]
+      responses:
+        "204": { description: Logged out }
+  /api/auth/mobile/login:
+    post:
+      operationId: mobileLogin
+      summary: Sign in a mobile client
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/LoginRequest" } } }
+      responses:
+        "200": { description: Access and refresh tokens returned }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: Account pending approval or suspended }
+  /api/auth/mobile/refresh:
+    post:
+      operationId: mobileRefresh
+      summary: Rotate a mobile refresh token
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/RefreshRequest" } } }
+      responses:
+        "200": { description: Rotated access and refresh tokens }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/auth/mobile/logout:
+    post:
+      operationId: mobileLogout
+      summary: Revoke a mobile refresh token
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/RefreshRequest" } } }
+      responses:
+        "204": { description: Logged out }
+  /api/auth/me:
+    get:
+      operationId: getCurrentUser
+      summary: Get the authenticated user
+      tags: [Authentication]
+      responses:
+        "200": { description: Current user }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/auth/forgot-password:
+    post:
+      operationId: forgotPassword
+      summary: Request a password-reset token
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ForgotPasswordRequest" } } }
+      responses:
+        "202": { description: Generic response whether or not the email exists }
+  /api/auth/reset-password:
+    post:
+      operationId: resetPassword
+      summary: Reset a password using an unexpired token
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ResetPasswordRequest" } } }
+      responses:
+        "204": { description: Password reset and refresh sessions revoked }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/auth/onboarding/{id}/approve:
+    patch:
+      operationId: approveOnboarding
+      summary: Approve a pending institution request
+      tags: [Authentication]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Institution and its pending user are activated }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: Admin role required }
   /api/health:
     get:
       operationId: getHealth
@@ -274,5 +462,7 @@ paths:
                         $ref: "#/components/schemas/HealthData"
 
 tags:
+  - name: Authentication
+    description: Registration, onboarding, sessions, and password recovery.
   - name: Health
     description: System health and readiness endpoints

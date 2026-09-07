@@ -52,4 +52,4 @@ Errors: 400 invalid payload or team; 401 missing/invalid session; 403 unauthoriz
 
 The inbox is empty until an administrator assigns challenges. No demo accounts or records are created automatically. Use the existing institution onboarding and administrator approval routes before signing in as a university.
 
-Verification: `npm run build`, `npm test`, and `npm run lint` in `backend`; `npm run build` in `client`. University integration tests require MongoDB on `127.0.0.1:27017`; they create and remove a uniquely named test database without touching development data.
+Verification: `npm run build`, `npm test`, and `npm run lint` in `server/backend`; `npm run build` in `client`. University integration tests require MongoDB on `127.0.0.1:27017`; they create and remove a uniquely named test database without touching development data.

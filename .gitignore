@@ -142,9 +142,10 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
 
-# Backend
-backend/dist/
-backend/node_modules/
+# Backend (nested under the server workspace)
+server/backend/dist/
+server/backend/node_modules/
+server/backend/uploads/
 .env
 !.env.example
 
