@@ -14,6 +14,7 @@ function generateRequestId(): string {
 
 export const apiClient: AxiosInstance = axios.create({
   baseURL: '/api',
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -23,8 +24,15 @@ export const apiClient: AxiosInstance = axios.create({
 // Request interceptor: attach X-Request-Id
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    if (config.data instanceof FormData) {
+      config.headers.delete('Content-Type');
+    }
     if (!config.headers.get('X-Request-Id')) {
       config.headers.set('X-Request-Id', generateRequestId());
+    }
+    const accessToken = sessionStorage.getItem('civicx_access_token');
+    if (accessToken && !config.headers.get('Authorization')) {
+      config.headers.set('Authorization', `Bearer ${accessToken}`);
     }
     return config;
   },

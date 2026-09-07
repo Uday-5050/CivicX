@@ -11,7 +11,12 @@
     "test": "vitest run",
     "test:watch": "vitest"
   },
-  "keywords": ["civicx", "civic-engagement", "api", "backend"],
+  "keywords": [
+    "civicx",
+    "civic-engagement",
+    "api",
+    "backend"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
@@ -22,23 +27,25 @@
     "helmet": "^8.1.0",
     "jose": "^6.2.12",
     "mongoose": "^8.13.2",
+    "multer": "^2.3.0",
     "pino": "^9.6.0",
     "pino-http": "^10.4.0",
     "uuid": "^11.1.0",
     "zod": "^3.24.4"
   },
   "devDependencies": {
+    "@eslint/js": "^9.28.0",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.2",
+    "@types/multer": "^2.2.0",
+    "@types/supertest": "^6.0.2",
     "@types/uuid": "^10.0.0",
     "eslint": "^9.28.0",
-    "@eslint/js": "^9.28.0",
-    "typescript-eslint": "^8.32.1",
     "pino-pretty": "^13.0.0",
     "supertest": "^7.1.0",
-    "@types/supertest": "^6.0.2",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3",
+    "typescript-eslint": "^8.32.1",
     "vitest": "^3.2.1"
   }
 }

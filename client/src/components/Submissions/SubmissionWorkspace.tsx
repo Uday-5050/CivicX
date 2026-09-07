@@ -14,6 +14,7 @@ function formatDate(value: string) { return new Intl.DateTimeFormat('en-IN', { d
 export default function SubmissionWorkspace({ role }: { role: Role }) {
   const [form, setForm] = useState(initialForm)
   const [attachments, setAttachments] = useState<SubmissionAttachment[]>([])
+  const [attachmentFiles, setAttachmentFiles] = useState<File[]>([])
   const [analysis, setAnalysis] = useState<SubmissionAnalysis>({ status: 'pending' })
   const [analysisMessage, setAnalysisMessage] = useState('Add a title and description to preview classification.')
   const [submissions, setSubmissions] = useState<Submission[]>([])
@@ -49,10 +50,12 @@ export default function SubmissionWorkspace({ role }: { role: Role }) {
   const update = (key: keyof FormState, value: string) => setForm((current) => ({ ...current, [key]: value }))
   const onFiles = (files: FileList | null) => {
     if (!files) return
-    const next = Array.from(files).slice(0, 5).map((file) => ({ id: `${file.name}-${file.lastModified}`, name: file.name, type: file.type, size: file.size, previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined }))
+    const selected = Array.from(files).slice(0, 5)
+    const next = selected.map((file) => ({ id: `${file.name}-${file.lastModified}`, name: file.name, type: file.type, size: file.size, previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined }))
     setAttachments((current) => [...current, ...next].slice(0, 5))
+    setAttachmentFiles((current) => [...current, ...selected].slice(0, 5))
   }
-  const removeFile = (id: string) => setAttachments((current) => current.filter((attachment) => attachment.id !== id))
+  const removeFile = (id: string) => { setAttachments((current) => current.filter((attachment) => attachment.id !== id)); setAttachmentFiles((current) => current.filter((file) => `${file.name}-${file.lastModified}` !== id)) }
   const submit = async (confirmed = false) => {
     setError(''); setSuccess('')
     if (!form.title.trim() || form.description.trim().length < 20 || !form.location.trim()) { setError('Add a title, a detailed description, and a location before submitting.'); return }
@@ -61,10 +64,10 @@ export default function SubmissionWorkspace({ role }: { role: Role }) {
     if (existing && !confirmed) { setDuplicate(existing); return }
     setBusy(true)
     try {
-      const created = await createSubmission({ ...form, submitterType: role, attachments, idempotencyKey })
+      const created = await createSubmission({ ...form, submitterType: role, attachments, files: attachmentFiles, idempotencyKey })
       const withAnalysis = analysis.status === 'completed' ? { ...created, analysis } : created
       setSubmissions((current) => [withAnalysis, ...current.filter((submission) => submission.id !== withAnalysis.id)])
-      setForm(initialForm); setAttachments([]); setAnalysis({ status: 'pending' }); setSuccess('Submission saved. You can track it below.'); setDuplicate(null)
+      setForm(initialForm); setAttachments([]); setAttachmentFiles([]); setAnalysis({ status: 'pending' }); setSuccess('Submission saved. You can track it below.'); setDuplicate(null)
     } catch { setError('We could not save this submission. Your form data is still here; please retry.') }
     finally { setBusy(false) }
   }
