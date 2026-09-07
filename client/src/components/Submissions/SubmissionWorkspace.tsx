@@ -3,6 +3,8 @@ import type { FormEvent } from 'react'
 import { addSubmissionComment, classifySubmission, createSubmission, listSubmissions } from '../../api/submissions.api'
 import type { Submission, SubmissionAnalysis, SubmissionAttachment } from '../../api/types'
 import type { Role } from '../../constants/roles'
+import LocationPicker from '../LocationPicker/LocationPicker'
+import type { LocationData } from '../LocationPicker/LocationPicker'
 import './SubmissionWorkspace.css'
 
 type FormState = { title: string; description: string; domain: string; location: string }
@@ -24,6 +26,7 @@ export default function SubmissionWorkspace({ role }: { role: Role }) {
   const [error, setError] = useState('')
   const [commentFor, setCommentFor] = useState<string | null>(null)
   const [comment, setComment] = useState('')
+  const [locationData, setLocationData] = useState<LocationData | null>(null)
   const sequence = useRef(0)
 
   useEffect(() => { void listSubmissions().then(setSubmissions) }, [])
@@ -55,16 +58,17 @@ export default function SubmissionWorkspace({ role }: { role: Role }) {
   const removeFile = (id: string) => setAttachments((current) => current.filter((attachment) => attachment.id !== id))
   const submit = async (confirmed = false) => {
     setError(''); setSuccess('')
-    if (!form.title.trim() || form.description.trim().length < 20 || !form.location.trim()) { setError('Add a title, a detailed description, and a location before submitting.'); return }
-    const idempotencyKey = `${form.title.trim().toLowerCase()}-${form.location.trim().toLowerCase()}`.replace(/[^a-z0-9]+/g, '-').slice(0, 80)
+    if (!form.title.trim() || form.description.trim().length < 20 || !locationData) { setError('Add a title, a detailed description, and a location before submitting.'); return }
+    const locationStr = locationData.address
+    const idempotencyKey = `${form.title.trim().toLowerCase()}-${locationStr.trim().toLowerCase()}`.replace(/[^a-z0-9]+/g, '-').slice(0, 80)
     const existing = submissions.find((submission) => submission.idempotencyKey === idempotencyKey)
     if (existing && !confirmed) { setDuplicate(existing); return }
     setBusy(true)
     try {
-      const created = await createSubmission({ ...form, submitterType: role, attachments, idempotencyKey })
+      const created = await createSubmission({ ...form, location: locationData.address, submitterType: role, attachments, idempotencyKey })
       const withAnalysis = analysis.status === 'completed' ? { ...created, analysis } : created
       setSubmissions((current) => [withAnalysis, ...current.filter((submission) => submission.id !== withAnalysis.id)])
-      setForm(initialForm); setAttachments([]); setAnalysis({ status: 'pending' }); setSuccess('Submission saved. You can track it below.'); setDuplicate(null)
+      setForm(initialForm); setAttachments([]); setAnalysis({ status: 'pending' }); setLocationData(null); setSuccess('Submission saved. You can track it below.'); setDuplicate(null)
     } catch { setError('We could not save this submission. Your form data is still here; please retry.') }
     finally { setBusy(false) }
   }
@@ -79,7 +83,8 @@ export default function SubmissionWorkspace({ role }: { role: Role }) {
         <div className="section-kicker">01 <strong>Tell us what is happening</strong></div>
         <label>Title<input value={form.title} onChange={(event) => update('title', event.target.value)} placeholder="Give your issue a clear title" maxLength={120} required /></label>
         <label>Description<textarea value={form.description} onChange={(event) => update('description', event.target.value)} placeholder="Share the details, impact, and anything that could help resolve it..." rows={6} minLength={20} required /><small>{form.description.length}/2000 characters</small></label>
-        <div className="submission-fields"><label>Domain<select value={form.domain} onChange={(event) => update('domain', event.target.value)}>{domains.map((domain) => <option key={domain}>{domain}</option>)}</select></label><label>Location<input value={form.location} onChange={(event) => update('location', event.target.value)} placeholder="City, ward, or landmark" required /></label></div>
+        <div className="submission-fields"><label>Domain<select value={form.domain} onChange={(event) => update('domain', event.target.value)}>{domains.map((domain) => <option key={domain}>{domain}</option>)}</select></label></div>
+        <LocationPicker value={locationData} onChange={setLocationData} />
         <label className="upload-zone"><input type="file" accept="image/*,.pdf,.doc,.docx" multiple onChange={(event) => onFiles(event.target.files)} /><span className="upload-icon">+</span><strong>Attach photos or documents</strong><small>Up to 5 files, 10 MB each</small></label>
         {attachments.length > 0 && <div className="attachment-list">{attachments.map((attachment) => <div className="attachment" key={attachment.id}>{attachment.previewUrl ? <img src={attachment.previewUrl} alt="" /> : <span className="file-icon">DOC</span>}<span>{attachment.name}</span><button type="button" onClick={() => removeFile(attachment.id)} aria-label={`Remove ${attachment.name}`}>×</button></div>)}</div>}
         {error && <p className="submission-error" role="alert">{error}</p>}{success && <p className="submission-success" role="status">✓ {success}</p>}

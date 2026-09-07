@@ -17,7 +17,7 @@ const reports: AdminReportRow[] = [{ id: 'report_001', domain: 'Public safety', 
 
 const clone = <T,>(items: T[]) => items.map((item) => ({ ...item }));
 const fallback = async <T,>(items: T[]) => { await new Promise((resolve) => setTimeout(resolve, 160)); return clone(items); };
-async function get<T>(path: string, items: T[]): Promise<T[]> { try { return (await request<T[]>(path)).data; } catch { return fallback(items); } }
+async function get<T>(path: string, items: T[]): Promise<T[]> { try { return (await request<T[]>(path)).data; } catch (error) { if (import.meta.env.DEV) return fallback(items); throw error; } }
 
 export function listAdminInstitutions() { return get('/admin/institutions', institutions); }
 export function listAdminModeration() { return get('/admin/moderation', moderation); }
@@ -26,10 +26,10 @@ export function listAdminReports() { return get('/admin/reports', reports); }
 
 export async function decideInstitution(id: string, status: Exclude<AdminAccountStatus, 'pending'>): Promise<AdminInstitution> {
   try { return (await request<AdminInstitution>(`/admin/institutions/${encodeURIComponent(id)}/status`, { method: 'POST', data: { status } })).data; }
-  catch { await new Promise((resolve) => setTimeout(resolve, 180)); const institution = institutions.find((item) => item.id === id); if (!institution) throw new Error('Institution not found.'); institution.accountStatus = status; return { ...institution }; }
+  catch (error) { if (!import.meta.env.DEV) throw error; await new Promise((resolve) => setTimeout(resolve, 180)); const institution = institutions.find((item) => item.id === id); if (!institution) throw new Error('Institution not found.'); institution.accountStatus = status; return { ...institution }; }
 }
 
 export async function decideModeration(id: string, status: Exclude<ModerationStatus, 'open'>): Promise<AdminModerationItem> {
   try { return (await request<AdminModerationItem>(`/admin/moderation/${encodeURIComponent(id)}`, { method: 'POST', data: { status } })).data; }
-  catch { await new Promise((resolve) => setTimeout(resolve, 180)); const item = moderation.find((entry) => entry.id === id); if (!item) throw new Error('Moderation item not found.'); item.status = status; return { ...item }; }
+  catch (error) { if (!import.meta.env.DEV) throw error; await new Promise((resolve) => setTimeout(resolve, 180)); const item = moderation.find((entry) => entry.id === id); if (!item) throw new Error('Moderation item not found.'); item.status = status; return { ...item }; }
 }

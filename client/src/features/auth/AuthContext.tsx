@@ -29,6 +29,8 @@ const DEMO_EMAIL = 'citizen@civicx.test'
 const DEMO_PASSWORD = 'CivicX@123'
 const DEMO_ADMIN_EMAIL = 'admin@civicx.test'
 const DEMO_ADMIN_PASSWORD = 'Admin@123'
+const DEMO_GOV_EMAIL = 'gov@civicx.test'
+const DEMO_GOV_PASSWORD = 'Gov@1234'
 const PASSWORD_KEY = 'civicx_password'
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
@@ -59,7 +61,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (email.toLowerCase() !== DEMO_EMAIL && !email.includes('@')) return { ok: false, message: 'Enter a valid email address.' }
     if (email.toLowerCase() === DEMO_EMAIL && password !== DEMO_PASSWORD) return { ok: false, message: 'Invalid email or password.' }
     if (role === ROLES.ADMIN && (email.toLowerCase() !== DEMO_ADMIN_EMAIL || password !== DEMO_ADMIN_PASSWORD)) return { ok: false, message: 'Invalid administrator credentials.' }
-    saveSession({ id: 'usr_demo_001', name: 'Aarav Kumar', email, role, status: role === ROLES.UNIVERSITY || role === ROLES.INDUSTRY ? 'pending' : 'approved' }, email.toLowerCase() === DEMO_EMAIL ? DEMO_PASSWORD : password)
+    if (role === ROLES.GOVERNMENT && (email.toLowerCase() !== DEMO_GOV_EMAIL || password !== DEMO_GOV_PASSWORD)) return { ok: false, message: 'Invalid government credentials.' }
+    const demoName = role === ROLES.GOVERNMENT ? 'Dr. Anita Sharma' : 'Aarav Kumar'
+    saveSession({ id: role === ROLES.GOVERNMENT ? 'usr_gov_001' : 'usr_demo_001', name: demoName, email, role, status: role === ROLES.UNIVERSITY || role === ROLES.INDUSTRY ? 'pending' : 'approved' }, email.toLowerCase() === DEMO_EMAIL ? DEMO_PASSWORD : password)
     return { ok: true }
   }
 

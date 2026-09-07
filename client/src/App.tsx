@@ -11,9 +11,10 @@ import ProjectBoard from './components/Projects/ProjectBoard'
 import AccountWorkspace from './components/Account/AccountWorkspace'
 import AccountExtras from './components/Account/AccountExtras'
 import AdminDashboard from './components/Admin/AdminDashboard'
+import GovernmentDashboard from './components/Government/GovernmentDashboard'
 import './App.css'
 
-type Route = '/' | '/login' | '/register' | '/institution' | '/forgot-password' | '/reset-password' | '/home' | '/submit' | '/university' | '/industry' | '/projects' | '/settings' | '/admin'
+type Route = '/' | '/login' | '/register' | '/institution' | '/forgot-password' | '/reset-password' | '/home' | '/submit' | '/university' | '/industry' | '/projects' | '/settings' | '/admin' | '/government'
 const route = (): Route => (window.location.hash.replace('#', '') as Route) || '/'
 const go = (next: Route) => { window.location.hash = next }
 
@@ -56,6 +57,7 @@ function Home() {
   if (user.role === ROLES.UNIVERSITY) return <UniversityPage />
   if (user.role === ROLES.INDUSTRY) return <IndustryPage />
   if (user.role === ROLES.ADMIN) return <AdminPage />
+  if (user.role === ROLES.GOVERNMENT) return <GovernmentPage />
   const pending = user.status === 'pending'
   return <main className="home-page"><header className="home-header"><Brand /><div className="home-account"><a href="#/settings">Notifications & settings</a><span>{user.name}</span><button type="button" onClick={() => { logout(); go('/') }}>Sign out</button></div></header><section className="home-content"><p className="eyebrow"><span /> {ROLE_LABELS[user.role]} workspace</p><h1>Hello, {user.name.split(' ')[0]}.</h1><p className="home-lead">{pending ? 'Your institution profile is under review. We will notify you when it is approved.' : 'Your civic journey starts here. What would you like to do today?'}</p><div className="home-grid"><article><span className="tile-number">01</span><h2>Raise a request</h2><p>Share an issue or idea with the people who can help.</p><button type="button" onClick={() => go('/submit')}>Start a request →</button></article><article><span className="tile-number">02</span><h2>Track progress</h2><p>See updates from your community and institutions.</p><button type="button" onClick={() => go('/submit')}>View activity →</button></article><article><span className="tile-number">03</span><h2>Your profile</h2><p>Keep your contact details and preferences current.</p><button type="button" onClick={() => go('/settings')}>Manage profile →</button></article></div></section></main>
 }
@@ -106,7 +108,23 @@ function AdminPage() {
   return <main className="home-page"><header className="home-header"><Brand /><div className="home-account"><a href="#/admin">Admin dashboard</a><span>{user.name}</span><button type="button" onClick={() => { logout(); go('/') }}>Sign out</button></div></header><AdminDashboard /></main>
 }
 
-  function Landing() { return <main className="landing-page"><div className="landing-canvas" aria-hidden="true"><Threads color={[0.38, 0.72, 1]} amplitude={1.15} distance={0.12} enableMouseInteraction /></div><div className="landing-wash" aria-hidden="true" /><nav className="site-nav" aria-label="Main navigation"><Brand /><div className="nav-links"><a href="#services">Services</a><a href="#about">About CivicX</a></div><a className="nav-login" href="#/login">Sign in <span>↗</span></a></nav><section className="hero-copy" id="about"><p className="eyebrow"><span /> समस्या से समाधान तक</p><h1>From problems to solutions,<br /><em>CivicX is with you.</em></h1><p className="hero-description">Access public services, follow your requests, and build a better community from one trusted place.</p><div className="hero-actions"><a className="btn btn-primary" href="#/register">Get started <span>→</span></a><a className="text-link" href="#/login">Already registered? <strong>Sign in</strong></a></div></section><section className="service-bar" id="services" aria-label="CivicX services"><div className="service-intro"><span className="live-dot" /> Your civic space</div><div className="service-item"><span>01</span><strong>Raise a request</strong><small>Be heard, be counted</small></div><div className="service-item"><span>02</span><strong>Track progress</strong><small>Stay in the loop</small></div><div className="service-item"><span>03</span><strong>Shape tomorrow</strong><small>Take part locally</small></div></section></main> }
+function GovernmentLogin() {
+  const { login } = useAuth()
+  const [email, setEmail] = useState('gov@civicx.test')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const submit = async (event: FormEvent) => { event.preventDefault(); setBusy(true); const result = await login({ email, password }, ROLES.GOVERNMENT); setBusy(false); if (!result.ok) setError(result.message ?? 'Unable to sign in.'); else go('/government') }
+  return <AuthLayout eyebrow="Government portal" title="Monitor. Measure. Transform." copy="Access the Jharkhand Innovation Command Centre to track societal challenges, university engagement, industry collaboration, and measurable outcomes across all 24 districts."><form className="auth-form" onSubmit={submit}><label>Government email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" required /></label><label>Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter government credentials" autoComplete="current-password" required /></label>{error && <p className="inline-error" role="alert">{error}</p>}<button className="auth-submit" type="submit" disabled={busy}>{busy ? 'Signing in...' : 'Open government dashboard'} <span>→</span></button><p className="demo-note">Demo: gov@civicx.test / Gov@1234</p><p className="form-foot"><a href="#/">Return to CivicX</a></p></form></AuthLayout>
+}
+
+function GovernmentPage() {
+  const { user, logout } = useAuth()
+  if (!user || user.role !== ROLES.GOVERNMENT) return <GovernmentLogin />
+  return <main className="home-page"><header className="home-header"><Brand /><div className="home-account"><a href="#/government">Government dashboard</a><span>{user.name}</span><button type="button" onClick={() => { logout(); go('/') }}>Sign out</button></div></header><GovernmentDashboard /></main>
+}
+
+  function Landing() { return <main className="landing-page"><div className="landing-canvas" aria-hidden="true"><Threads color={[0.38, 0.72, 1]} amplitude={1.15} distance={0.12} enableMouseInteraction /></div><div className="landing-wash" aria-hidden="true" /><nav className="site-nav" aria-label="Main navigation"><Brand /><div className="nav-links"><a href="#services">Services</a><a href="#about">About CivicX</a><a href="#/government">Government</a></div><a className="nav-login" href="#/login">Sign in <span>↗</span></a></nav><section className="hero-copy" id="about"><p className="eyebrow"><span /> समस्या से समाधान तक</p><h1>From problems to solutions,<br /><em>CivicX is with you.</em></h1><p className="hero-description">Access public services, follow your requests, and build a better community from one trusted place.</p><div className="hero-actions"><a className="btn btn-primary" href="#/register">Get started <span>→</span></a><a className="text-link" href="#/login">Already registered? <strong>Sign in</strong></a></div></section><section className="service-bar" id="services" aria-label="CivicX services"><div className="service-intro"><span className="live-dot" /> Your civic space</div><div className="service-item"><span>01</span><strong>Raise a request</strong><small>Be heard, be counted</small></div><div className="service-item"><span>02</span><strong>Track progress</strong><small>Stay in the loop</small></div><div className="service-item"><span>03</span><strong>Shape tomorrow</strong><small>Take part locally</small></div></section></main> }
 
 export default function App() {
   const { user, isRefreshing, refreshSession } = useAuth()
@@ -120,6 +138,7 @@ export default function App() {
   if (currentRoute === '/projects') return <ProjectBoardPage />
   if (currentRoute === '/settings') return <SettingsPage />
   if (currentRoute === '/admin') return <AdminPage />
+  if (currentRoute === '/government') return <GovernmentPage />
   if (currentRoute === '/login') return <Login />
   if (currentRoute === '/register') return <Register />
   if (currentRoute === '/institution') return <Register institution />

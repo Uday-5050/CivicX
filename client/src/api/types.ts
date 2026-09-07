@@ -242,3 +242,93 @@ export class ApiError extends Error {
     this.requestId = requestId;
   }
 }
+
+/* ── Government Dashboard Types ── */
+
+export interface GovKpiCard {
+  id: string;
+  label: string;
+  value: number;
+  change: number; // percentage change from last period
+  icon: string;
+}
+
+export interface GovDomainStat {
+  id: string;
+  domain: string;
+  submitted: number;
+  inProgress: number;
+  resolved: number;
+  color: string;
+}
+
+export interface GovDistrictStat {
+  id: string;
+  district: string;
+  totalChallenges: number;
+  activeProjects: number;
+  resolved: number;
+  universitiesEngaged: number;
+  industryPartners: number;
+}
+
+export interface GovUniversityPerformance {
+  id: string;
+  name: string;
+  challengesAssigned: number;
+  projectsActive: number;
+  proposalsSubmitted: number;
+  solutionsDeployed: number;
+  patents: number;
+  startupsIncubated: number;
+}
+
+export interface GovIndustryEngagement {
+  id: string;
+  name: string;
+  type: 'large' | 'startup' | 'msme' | 'csr';
+  fundingLakhs: number;
+  mentorshipHours: number;
+  prototypes: number;
+  deployments: number;
+  sector: string;
+}
+
+export type GovProjectStage = 'submitted' | 'under_review' | 'in_progress' | 'pilot' | 'deployed';
+
+export interface GovProjectTimeline {
+  id: string;
+  title: string;
+  university: string;
+  industry: string;
+  domain: string;
+  district: string;
+  stage: GovProjectStage;
+  startDate: string;
+  lastUpdated: string;
+}
+
+export interface GovTrendPoint {
+  month: string;
+  submitted: number;
+  resolved: number;
+}
+
+export interface GovChallengeRow {
+  id: string;
+  title: string;
+  domain: string;
+  district: string;
+  status: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  university: string;
+  submittedAt: string;
+}
+
+export interface GovActivityEvent {
+  id: string;
+  message: string;
+  type: 'challenge' | 'project' | 'collaboration' | 'milestone';
+  timestamp: string;
+}
+
