@@ -99,8 +99,8 @@ function Home() {
 
 function SubmissionPage() {
   const { user, logout } = useAuth()
-  useEffect(() => { if (!user) go('/login') }, [user])
-  if (!user) return null
+  useEffect(() => { if (!user) go('/login'); else if (user.role !== ROLES.CITIZEN) go('/home') }, [user])
+  if (!user || user.role !== ROLES.CITIZEN) return null
   return <main className="home-page"><header className="home-header"><Brand /><div className="home-account"><a href="#/home">Dashboard</a><span>{user.name}</span><button type="button" onClick={() => { logout(); go('/') }}>Sign out</button></div></header><section className="home-content submission-page-content"><SubmissionWorkspace role={user.role} /></section></main>
 }
 
