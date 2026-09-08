@@ -13,8 +13,8 @@ type SavedDraft = { form: FormState; locationData: LocationData | null; savedAt:
 const initialForm: FormState = { title: '', description: '', domain: 'Public safety', location: '' }
 const domains = ['Public safety', 'Roads and transport', 'Water and sanitation', 'Health and education', 'Environment', 'Other']
 const maxFiles = 5
-const maxFileSize = 10 * 1024 * 1024
-const acceptedFileTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'])
+const maxFileSize = 100 * 1024 * 1024
+const acceptedFileTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm', 'video/quicktime', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'])
 const draftKey = 'civicx:submission-draft:v1'
 
 function submissionError(error: unknown): string {
@@ -105,7 +105,7 @@ export default function SubmissionWorkspace({ role }: { role: Role }) {
     const invalidCount = selected.length - valid.length
     const chosen = valid.slice(0, Math.max(0, available))
     if (!available) setFileNotice('You can attach up to five files. Remove a file before adding another.')
-    else if (invalidCount || valid.length > available) setFileNotice(`Only JPEG, PNG, WebP, PDF, DOC, and DOCX files up to 10 MB are allowed. Added ${chosen.length} file${chosen.length === 1 ? '' : 's'}.`)
+    else if (invalidCount || valid.length > available) setFileNotice(`Only JPEG, PNG, WebP, MP4, WebM, MOV, PDF, DOC, and DOCX files up to 100 MB are allowed. Added ${chosen.length} file${chosen.length === 1 ? '' : 's'}.`)
     else setFileNotice('')
     if (!chosen.length) return
     const next = chosen.map((file) => ({ id: `${file.name}-${file.lastModified}-${file.size}`, name: file.name, type: file.type, size: file.size, previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined }))
@@ -169,7 +169,7 @@ export default function SubmissionWorkspace({ role }: { role: Role }) {
         <label>Description<textarea value={form.description} onChange={(event) => update('description', event.target.value)} placeholder="Describe the issue, who it affects, and details that could help resolve it…" rows={6} minLength={20} maxLength={2000} required /><small>{form.description.length}/2000 characters · minimum 20</small></label>
         <div className="submission-fields"><label>Category<select value={form.domain} onChange={(event) => update('domain', event.target.value)}>{domains.map((domain) => <option key={domain}>{domain}</option>)}</select></label></div>
         <LocationPicker value={locationData} onChange={setLocation} />
-        <div className="submission-evidence"><div><p className="section-kicker">02 <strong>Add evidence <small>Optional</small></strong></p><p>Photos and documents help reviewers understand the issue.</p></div><label className="upload-zone"><input type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.doc,.docx" multiple onChange={onFiles} /><span className="upload-icon">+</span><span><strong>Attach photos or documents</strong><small>Up to 5 files · 10 MB each</small></span></label></div>
+        <div className="submission-evidence"><div><p className="section-kicker">02 <strong>Add evidence <small>Optional</small></strong></p><p>Photos, videos, and documents help reviewers understand the issue.</p></div><label className="upload-zone"><input type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime,application/pdf,.doc,.docx" multiple onChange={onFiles} /><span className="upload-icon">+</span><span><strong>Attach photos, videos, or documents</strong><small>Up to 5 files · 100 MB each</small></span></label></div>
         {fileNotice && <p className="submission-file-notice" role="status">{fileNotice}</p>}
         {attachments.length > 0 && <div className="attachment-list" aria-label="Selected files">{attachments.map((attachment) => <div className="attachment" key={attachment.id}>{attachment.previewUrl ? <img src={attachment.previewUrl} alt="" /> : <span className="file-icon">{attachment.type === 'application/pdf' ? 'PDF' : 'DOC'}</span>}<span><strong>{attachment.name}</strong><small>{formatFileSize(attachment.size)}</small></span><button type="button" onClick={() => removeFile(attachment.id)} aria-label={`Remove ${attachment.name}`}>×</button></div>)}</div>}
         {error && <p className="submission-error" role="alert">{error}</p>}{success && <p className="submission-success" role="status">✓ {success}</p>}
