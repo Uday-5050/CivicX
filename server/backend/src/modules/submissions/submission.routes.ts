@@ -7,6 +7,25 @@ import { sendSuccess } from "../../utils/response";
 import { Submission } from "./submission.model";
 import { classifySubmissionSchema, commentSchema, createSubmissionSchema } from "./submission.schemas";
 import { uploadAttachments } from "./upload.middleware";
+import { cloudinary, cloudinaryConfigured } from "../../config/cloudinary";
+
+type UploadedAttachment = { id: string; name: string; type: string; size: number; previewUrl: string };
+
+function uploadToCloudinary(file: Express.Multer.File): Promise<UploadedAttachment> {
+  if (!cloudinaryConfigured) return Promise.reject(new Error("Cloudinary is not configured"));
+  const resourceType = file.mimetype.startsWith("video/") ? "video" : file.mimetype.startsWith("image/") ? "image" : "raw";
+
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder: "civicx/reports", resource_type: resourceType, use_filename: true, unique_filename: true },
+      (error, result) => {
+        if (error || !result) return reject(error ?? new Error("Cloudinary did not return an upload result"));
+        resolve({ id: result.public_id, name: file.originalname, type: file.mimetype, size: file.size, previewUrl: result.secure_url });
+      },
+    );
+    stream.end(file.buffer);
+  });
+}
 
 const router = Router();
 router.use(requireAuth, requireRole("citizen"));
@@ -23,13 +42,13 @@ router.post("/classify", validate(classifySubmissionSchema), (req, res) => {
   sendSuccess(res, { status: "completed", category, priority, summary: `This appears to be a ${category.toLowerCase()} concern.` });
 });
 
-router.post("/", uploadAttachments, (req, _res, next) => {
-  const files = Array.isArray(req.files) ? req.files : [];
-  req.body = {
-    ...req.body,
-    attachments: files.map((file) => ({ id: file.filename, name: file.originalname, type: file.mimetype, size: file.size, previewUrl: `/api/uploads/${file.filename}` })),
-  };
-  next();
+router.post("/", uploadAttachments, async (req, _res, next) => {
+  try {
+    const files = Array.isArray(req.files) ? req.files : [];
+    const attachments = await Promise.all(files.map(uploadToCloudinary));
+    req.body = { ...req.body, attachments };
+    next();
+  } catch (error) { next(error); }
 }, validate(createSubmissionSchema), async (req, res, next) => {
   try {
     const input = req.body;

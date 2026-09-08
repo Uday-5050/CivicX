@@ -21,6 +21,11 @@ const config = {
   refreshTokenTtlDays: parseInt(process.env.REFRESH_TOKEN_TTL_DAYS || "30", 10),
   passwordResetTtlMinutes: parseInt(process.env.PASSWORD_RESET_TTL_MINUTES || "30", 10),
 
+  // Cloudinary media storage
+  cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME || "",
+  cloudinaryApiKey: process.env.CLOUDINARY_API_KEY || "",
+  cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET || "",
+
   // AI adapter
   aiProvider: process.env.AI_PROVIDER || "mock",
 

@@ -16,9 +16,14 @@ const corsMiddleware = cors({
       return callback(null, true);
     }
 
-    // In development, allow local Vite origins.
-    if (config.isDev && (origin.includes("localhost") || origin.includes("127.0.0.1"))) {
-      return callback(null, true);
+    // In development, allow Vite running on localhost or a private LAN address.
+    if (config.isDev) {
+      try {
+        const hostname = new URL(origin).hostname;
+        if (hostname === "localhost" || hostname === "127.0.0.1" || /^10\./.test(hostname) || /^192\.168\./.test(hostname) || /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname)) return callback(null, true);
+      } catch {
+        // Invalid origins are handled by the regular CORS rejection below.
+      }
     }
 
     callback(new Error(`Origin ${origin} not allowed by CORS`));

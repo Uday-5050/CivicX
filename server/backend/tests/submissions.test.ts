@@ -1,13 +1,22 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import mongoose from "mongoose";
 import { randomUUID } from "node:crypto";
-import { rm } from "node:fs/promises";
-import { resolve } from "node:path";
 import request from "supertest";
+
+vi.mock("../src/config/cloudinary", () => ({
+  cloudinaryConfigured: true,
+  cloudinary: {
+    uploader: {
+      upload_stream: (_options: unknown, callback: (error: unknown, result?: { public_id: string; secure_url: string }) => void) => ({
+        end: () => callback(undefined, { public_id: "civicx/reports/test-image", secure_url: "https://res.cloudinary.com/civicx/image/upload/test-image.jpg" }),
+      }),
+    },
+  },
+}));
+
 import app from "../src/app";
 import { User } from "../src/modules/auth/user.model";
 import { signAccessToken } from "../src/modules/auth/auth.service";
-import { uploadDirectory } from "../src/modules/submissions/upload.middleware";
 
 const database = `civicx_test_submissions_${randomUUID().replaceAll("-", "")}`;
 let citizenToken: string;
@@ -50,7 +59,7 @@ describe("Citizen submissions", () => {
     expect(repeat.body.data.id).toBe(first.body.data.id);
   });
 
-  it("stores an uploaded image and returns a backend URL", async () => {
+  it("stores an uploaded image and returns its Cloudinary URL", async () => {
     const response = await request(app)
       .post("/api/submissions")
       .auth(citizenToken, { type: "bearer" })
@@ -62,9 +71,7 @@ describe("Citizen submissions", () => {
       .attach("attachments", Buffer.from([0xff, 0xd8, 0xff, 0xd9]), { filename: "report.jpg", contentType: "image/jpeg" });
     expect(response.status).toBe(201);
     const attachment = response.body.data.attachments[0];
-    expect(attachment.previewUrl).toMatch(/^\/api\/uploads\//);
-    expect((await request(app).get(attachment.previewUrl)).status).toBe(200);
-    await rm(resolve(uploadDirectory, attachment.id));
+    expect(attachment.previewUrl).toBe("https://res.cloudinary.com/civicx/image/upload/test-image.jpg");
   });
 
   it("requires an authenticated citizen", async () => {

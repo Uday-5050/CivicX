@@ -5,7 +5,7 @@ const attachmentSchema = z.object({
   id: z.string().trim().min(1).max(300),
   name: z.string().trim().min(1).max(255),
   type: z.string().trim().max(150),
-  size: z.number().int().min(0).max(10 * 1024 * 1024),
+  size: z.number().int().min(0).max(100 * 1024 * 1024),
   previewUrl: z.string().max(2000).optional(),
 }).strict();
 

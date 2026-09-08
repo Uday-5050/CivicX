@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { addSubmissionComment, classifySubmission, createSubmission, listSubmissions } from '../../api/submissions.api'
-import type { Submission, SubmissionAnalysis, SubmissionAttachment } from '../../api/types'
+import { ApiError, type Submission, type SubmissionAnalysis, type SubmissionAttachment } from '../../api/types'
 import type { Role } from '../../constants/roles'
 import LocationPicker from '../LocationPicker/LocationPicker'
 import type { LocationData } from '../LocationPicker/LocationPicker'
@@ -10,6 +10,11 @@ import './SubmissionWorkspace.css'
 type FormState = { title: string; description: string; domain: string; location: string }
 const initialForm: FormState = { title: '', description: '', domain: 'Public safety', location: '' }
 const domains = ['Public safety', 'Roads and transport', 'Water and sanitation', 'Health and education', 'Environment', 'Other']
+
+function submissionError(error: unknown): string {
+  if (error instanceof ApiError && error.statusCode === 401) return 'Your session is missing or expired. Please sign in again before submitting. Your form data is still here.'
+  return error instanceof Error ? `${error.message} Your form data is still here; please retry.` : 'We could not save this submission. Your form data is still here; please retry.'
+}
 
 function formatDate(value: string) { return new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short' }).format(new Date(value)) }
 
@@ -30,7 +35,7 @@ export default function SubmissionWorkspace({ role }: { role: Role }) {
   const [locationData, setLocationData] = useState<LocationData | null>(null)
   const sequence = useRef(0)
 
-  useEffect(() => { void listSubmissions().then(setSubmissions) }, [])
+  useEffect(() => { void listSubmissions().then(setSubmissions).catch((error: unknown) => setError(submissionError(error))) }, [])
 
   useEffect(() => {
     if (!form.title.trim() || form.description.trim().length < 20) {
@@ -72,7 +77,7 @@ export default function SubmissionWorkspace({ role }: { role: Role }) {
       const withAnalysis = analysis.status === 'completed' ? { ...created, analysis } : created
       setSubmissions((current) => [withAnalysis, ...current.filter((submission) => submission.id !== withAnalysis.id)])
       setForm(initialForm); setAttachments([]); setAttachmentFiles([]); setAnalysis({ status: 'pending' }); setLocationData(null); setSuccess('Submission saved. You can track it below.'); setDuplicate(null)
-    } catch { setError('We could not save this submission. Your form data is still here; please retry.') }
+    } catch (error) { setError(submissionError(error)) }
     finally { setBusy(false) }
   }
   const upvote = (id: string) => setSubmissions((current) => current.map((submission) => submission.id === id ? { ...submission, hasUpvoted: !submission.hasUpvoted, upvotes: submission.upvotes + (submission.hasUpvoted ? -1 : 1) } : submission))
