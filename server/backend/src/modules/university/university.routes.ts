@@ -9,6 +9,8 @@ import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from ".
 import { sendSuccess } from "../../utils/response";
 import { UniversityChallenge } from "./university.model";
 import { createChallengeSchema, decisionSchema } from "./university.schemas";
+import { Project } from "../projects/project.model";
+import { Submission } from "../submissions/submission.model";
 
 const router = Router();
 router.use(requireAuth);
@@ -21,7 +23,7 @@ async function institutionFor(userId: string): Promise<string> {
 }
 function serialize(challenge: InstanceType<typeof UniversityChallenge>) {
   const { _id, institutionId: _institutionId, decidedBy: _decidedBy, ...data } = challenge.toObject();
-  return { ...data, id: _id.toString() };
+  return { ...data, id: _id.toString(), projectId: data.project?.id };
 }
 // Administrators assign real challenges and eligible teams to an approved university.
 router.post("/challenges", requireRole("admin"), validate(createChallengeSchema), async (req, res, next) => {
@@ -51,13 +53,22 @@ router.post("/challenges/:id/decision", requireRole("university"), validate(deci
       if (!challenge.members.some(member => member.id === proposal.mentorId && member.role === "mentor")) throw ValidationError("Select an eligible mentor from this challenge");
       if (!proposal.studentIds.every(id => challenge.members.some(member => member.id === id && member.role === "student"))) throw ValidationError("Select eligible students from this challenge");
     }
-    // One atomic write records the decision, proposal, and project even on standalone MongoDB.
+    const projectId = proposal ? randomUUID() : undefined;
+    // One atomic write means concurrent decisions cannot create more than one project ID.
     const updated = await UniversityChallenge.findOneAndUpdate(
       { _id: id, institutionId, version, decision: "pending" },
-      { $set: { decision, decidedBy: req.auth!.userId, decidedAt: new Date(), ...(proposal ? { proposal, project: { id: randomUUID(), status: "active", createdAt: new Date() } } : {}) }, $inc: { version: 1 } },
+      { $set: { decision, decidedBy: req.auth!.userId, decidedAt: new Date(), ...(proposal && projectId ? { proposal, project: { id: projectId, status: "active", createdAt: new Date() } } : {}) }, $inc: { version: 1 } },
       { new: true, runValidators: true },
     );
     if (!updated) throw ConflictError("This challenge changed while you were reviewing it");
+    if (proposal && projectId) {
+      await Project.updateOne(
+        { id: projectId },
+        { $setOnInsert: { id: projectId, challengeId: updated._id.toString(), sourceSubmissionId: updated.sourceSubmissionId, submissionId: updated.sourceSubmissionId, institutionId, title: updated.title, summary: updated.summary, domain: updated.domain, department: updated.department, team: { leadId: req.auth!.userId, mentorId: proposal.mentorId, studentIds: proposal.studentIds }, currentStage: "proposed", version: 1, evidence: {}, deliverables: [], ipDisclosures: [], testRecords: [] } },
+        { upsert: true },
+      );
+      if (updated.sourceSubmissionId) await Submission.updateOne({ _id: updated.sourceSubmissionId, status: { $in: ["submitted", "under_review"] } }, { $set: { status: "assigned" } });
+    }
     sendSuccess(res, serialize(updated));
   } catch (error) { next(error); }
 });

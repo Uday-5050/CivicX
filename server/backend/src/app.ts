@@ -9,6 +9,9 @@ import healthRoutes from "./modules/health/health.routes";
 import authRoutes from "./modules/auth/auth.routes";
 import universityRoutes from "./modules/university/university.routes";
 import submissionRoutes from "./modules/submissions/submission.routes";
+import adminRoutes from "./modules/admin/admin.routes";
+import projectRoutes from "./modules/projects/project.routes";
+import industryRoutes from "./modules/industry/industry.routes";
 
 // ──────────────────────────────────────────────
 // Express application (separated from server.ts)
@@ -28,6 +31,9 @@ app.use("/api/health", healthRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/university", universityRoutes);
 app.use("/api/submissions", submissionRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/projects", projectRoutes);
+app.use("/api", industryRoutes);
 
 // ── 404 handler ───────────────────────────────
 app.use((req, res) => {

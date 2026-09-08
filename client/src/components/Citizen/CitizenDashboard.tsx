@@ -9,6 +9,8 @@ const statusCopy: Record<SubmissionStatus, { label: string; detail: string }> = 
   draft: { label: 'Draft', detail: 'Saved locally and not sent to the review team.' },
   submitted: { label: 'Submitted', detail: 'Your report has been received and is waiting for review.' },
   under_review: { label: 'Under review', detail: 'The CivicX review team is checking the report and its evidence.' },
+  assigned: { label: 'Assigned', detail: 'A university team has accepted this report and is preparing its project.' },
+  in_progress: { label: 'In progress', detail: 'The university project team is working on the approved solution.' },
   resolved: { label: 'Resolved', detail: 'This report has been marked resolved.' },
 }
 
