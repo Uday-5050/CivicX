@@ -54,8 +54,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
-  void demoLogin() => ref.read(authProvider.notifier).demoLogin();
-
   void _show(String text) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
 
@@ -126,17 +124,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         child: busy
                             ? const CircularProgressIndicator()
                             : Text(text('Sign in', 'साइन इन करें'))),
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                        onPressed: busy ? null : demoLogin,
-                        icon: const Icon(Icons.play_circle_outline),
-                        label: Text(text('Continue in demo mode',
-                            'डेमो मोड में जारी रखें'))),
-                    const SizedBox(height: 8),
-                    Text(
-                        text('Demo mode does not contact the Civix server.',
-                            'डेमो मोड Civix सर्वर से नहीं जुड़ता है।'),
-                        textAlign: TextAlign.center),
                     TextButton(
                         onPressed: () => context.push('/register'),
                         child: Text(text(

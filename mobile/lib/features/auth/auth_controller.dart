@@ -10,13 +10,11 @@ class AuthState {
     required this.status,
     this.user,
     this.error,
-    this.isDemo = false,
   });
 
   final AuthStatus status;
   final User? user;
   final String? error;
-  final bool isDemo;
 }
 
 final apiClientProvider =
@@ -62,20 +60,6 @@ class AuthController extends StateNotifier<AuthState> {
       state = AuthState(status: AuthStatus.signedOut, error: _message(error));
       return false;
     }
-  }
-
-  void demoLogin() {
-    state = const AuthState(
-      status: AuthStatus.signedIn,
-      isDemo: true,
-      user: User(
-        id: 'demo-citizen',
-        name: 'Demo Citizen',
-        email: 'demo@civix.local',
-        role: 'citizen',
-        accountStatus: 'active',
-      ),
-    );
   }
 
   Future<String?> register(String name, String email, String password) async {
