@@ -68,7 +68,13 @@ export default function Threads({
     const container = containerRef.current
     if (!container) return
 
-    const renderer = new Renderer({ alpha: true, antialias: true })
+    let renderer: Renderer
+    try {
+      renderer = new Renderer({ alpha: true, antialias: true })
+      if (!renderer.gl) return
+    } catch {
+      return
+    }
     const gl = renderer.gl
     gl.clearColor(0, 0, 0, 0)
     gl.enable(gl.BLEND)
@@ -146,8 +152,8 @@ export default function Threads({
       window.removeEventListener('resize', resize)
       container.removeEventListener('mousemove', handleMouseMove)
       container.removeEventListener('mouseleave', handleMouseLeave)
-      if (container.contains(gl.canvas)) container.removeChild(gl.canvas)
-      gl.getExtension('WEBGL_lose_context')?.loseContext()
+      if (gl?.canvas && container.contains(gl.canvas)) container.removeChild(gl.canvas)
+      gl?.getExtension?.('WEBGL_lose_context')?.loseContext()
     }
   }, [])
 

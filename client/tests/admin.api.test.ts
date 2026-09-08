@@ -1,21 +1,21 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { decideInstitution, decideModeration, listAdminInstitutions, listAdminModeration } from '../src/api/admin.api'
+import { request } from '../src/api/client'
+
+vi.mock('../src/api/client', () => ({ request: vi.fn() }))
 
 describe('admin integration contract', () => {
-  afterEach(() => vi.unstubAllGlobals())
+  afterEach(() => vi.mocked(request).mockReset())
 
-  it('loads development fixtures when the admin API is unavailable', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')))
-    const institutions = await listAdminInstitutions()
-    expect(institutions.some((institution) => institution.accountStatus === 'pending')).toBe(true)
+  it('does not replace an unavailable admin API with fixtures', async () => {
+    vi.mocked(request).mockRejectedValueOnce(new Error('offline'))
+    await expect(listAdminInstitutions()).rejects.toThrow('offline')
   })
 
-  it('persists an approval and moderation decision in the fallback store', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')))
-    const approved = await decideInstitution('inst_001', 'active')
-    const resolved = await decideModeration('mod_001', 'resolved')
-    expect(approved.accountStatus).toBe('active')
-    expect(resolved.status).toBe('resolved')
-    expect((await listAdminModeration()).find((item) => item.id === 'mod_001')?.status).toBe('resolved')
+  it('does not claim an approval or moderation decision after a failed request', async () => {
+    vi.mocked(request).mockRejectedValue(new Error('offline'))
+    await expect(decideInstitution('inst_001', 'active')).rejects.toThrow('offline')
+    await expect(decideModeration('mod_001', 'resolved')).rejects.toThrow('offline')
+    await expect(listAdminModeration()).rejects.toThrow('offline')
   })
 })

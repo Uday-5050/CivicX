@@ -212,3 +212,54 @@
 
 .registration-page .registration-divider,
 .registration-page .social-actions { display: none; }
+
+/* Password visibility toggle button */
+.registration-input button.toggle-pwd-btn {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 42px;
+  border: 0;
+  background: none;
+  padding: 0 12px;
+  color: #8190a2;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  height: 100%;
+}
+.registration-input button.toggle-pwd-btn:hover {
+  color: #1475db;
+}
+
+.auth-password-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+.auth-password-wrap input {
+  padding-right: 42px !important;
+}
+.auth-password-wrap .auth-password-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 0;
+  background: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+.auth-password-wrap .auth-password-toggle:hover {
+  color: #0b3d91;
+}
+
+/* The server owns persistent web sessions through its refresh cookie. */
+.form-row .check-label { display: none; }
