@@ -5,6 +5,7 @@ import { useAuth } from './features/auth/AuthContext'
 import { ROLE_LABELS, ROLES, type Role } from './constants/roles'
 import { request } from './api/client'
 import SubmissionWorkspace from './components/Submissions/SubmissionWorkspace'
+import CitizenDashboard from './components/Citizen/CitizenDashboard'
 import UniversityInbox from './components/University/UniversityInbox'
 import IndustryWorkspace from './components/Industry/IndustryWorkspace'
 import UniversityCollaborationRequests from './components/University/UniversityCollaborationRequests'
@@ -15,7 +16,7 @@ import AdminDashboard from './components/Admin/AdminDashboard'
 import GovernmentDashboard from './components/Government/GovernmentDashboard'
 import './App.css'
 
-type Route = '/' | '/login' | '/register' | '/institution' | '/forgot-password' | '/reset-password' | '/home' | '/submit' | '/university' | '/industry' | '/projects' | '/settings' | '/admin' | '/government'
+type Route = '/' | '/login' | '/register' | '/institution' | '/forgot-password' | '/reset-password' | '/home' | '/submit' | '/tracker' | '/university' | '/industry' | '/projects' | '/settings' | '/admin' | '/government'
 const route = (): Route => {
   const hash = window.location.hash.replace('#', '')
   if (hash === 'services' || hash === 'about') return '/'
@@ -93,7 +94,7 @@ function Home() {
   if (user.role === ROLES.ADMIN) return <AdminPage />
   if (user.role === ROLES.GOVERNMENT) return <GovernmentPage />
   const pending = user.status === 'pending'
-  return <main className="home-page"><header className="home-header"><Brand /><div className="home-account"><a href="#/settings">Notifications & settings</a><span>{user.name}</span><button type="button" onClick={() => { logout(); go('/') }}>Sign out</button></div></header><section className="home-content"><p className="eyebrow"><span /> {ROLE_LABELS[user.role]} workspace</p><h1>Hello, {user.name.split(' ')[0]}.</h1><p className="home-lead">{pending ? 'Your institution profile is under review. We will notify you when it is approved.' : 'Your civic journey starts here. What would you like to do today?'}</p><div className="home-grid"><article><span className="tile-number">01</span><h2>Raise a request</h2><p>Share an issue or idea with the people who can help.</p><button type="button" onClick={() => go('/submit')}>Start a request →</button></article><article><span className="tile-number">02</span><h2>Track progress</h2><p>See updates from your community and institutions.</p><button type="button" onClick={() => go('/submit')}>View activity →</button></article><article><span className="tile-number">03</span><h2>Your profile</h2><p>Keep your contact details and preferences current.</p><button type="button" onClick={() => go('/settings')}>Manage profile →</button></article></div></section></main>
+  return <main className="home-page"><header className="home-header"><Brand /><div className="home-account"><a href="#/settings">Notifications & settings</a><span>{user.name}</span><button type="button" onClick={() => { logout(); go('/') }}>Sign out</button></div></header><section className="home-content"><p className="eyebrow"><span /> {ROLE_LABELS[user.role]} workspace</p><h1>Hello, {user.name.split(' ')[0]}.</h1><p className="home-lead">{pending ? 'Your institution profile is under review. We will notify you when it is approved.' : 'Your civic journey starts here. What would you like to do today?'}</p><div className="home-grid"><article><span className="tile-number">01</span><h2>Raise a request</h2><p>Share an issue or idea with the people who can help.</p><button type="button" onClick={() => go('/submit')}>Start a request →</button></article><article><span className="tile-number">02</span><h2>Track progress</h2><p>Review each report, its current status, attachments, and analysis.</p><button type="button" onClick={() => go('/tracker')}>View activity →</button></article><article><span className="tile-number">03</span><h2>Your profile</h2><p>Keep your contact details and preferences current.</p><button type="button" onClick={() => go('/settings')}>Manage profile →</button></article></div></section></main>
 }
 
 function SubmissionPage() {
@@ -101,6 +102,17 @@ function SubmissionPage() {
   useEffect(() => { if (!user) go('/login') }, [user])
   if (!user) return null
   return <main className="home-page"><header className="home-header"><Brand /><div className="home-account"><a href="#/home">Dashboard</a><span>{user.name}</span><button type="button" onClick={() => { logout(); go('/') }}>Sign out</button></div></header><section className="home-content submission-page-content"><SubmissionWorkspace role={user.role} /></section></main>
+}
+
+function CitizenTrackerPage() {
+  const { user, logout } = useAuth()
+  useEffect(() => {
+    if (!user) go('/login')
+    else if (user.role !== ROLES.CITIZEN) go('/home')
+  }, [user])
+  if (!user || user.role !== ROLES.CITIZEN) return null
+
+  return <main className="home-page"><header className="home-header"><Brand /><div className="home-account"><a href="#/home">Dashboard</a><a href="#/submit">Raise a request</a><span>{user.name}</span><button type="button" onClick={() => { logout(); go('/') }}>Sign out</button></div></header><section className="home-content submission-page-content"><CitizenDashboard onCreateReport={() => go('/submit')} /></section></main>
 }
 
 function UniversityPage() {
@@ -179,6 +191,7 @@ export default function App() {
   if (isRefreshing) return <div className="route-loading">Restoring your secure session...</div>
   if (currentRoute === '/home') return <Home />
   if (currentRoute === '/submit') return <SubmissionPage />
+  if (currentRoute === '/tracker') return <CitizenTrackerPage />
   if (currentRoute === '/university') return <UniversityPage />
   if (currentRoute === '/industry') return <IndustryPage />
   if (currentRoute === '/projects') return <ProjectBoardPage />
