@@ -42,10 +42,10 @@ class AuthController extends StateNotifier<AuthState> {
     }
     try {
       final response = await _api.dio.get('/auth/me');
+      final data = Map<String, dynamic>.from(response.data['data'] as Map);
       state = AuthState(
           status: AuthStatus.signedIn,
-          user: User.fromJson(
-              Map<String, dynamic>.from(response.data['data'] as Map)));
+          user: User.fromJson(Map<String, dynamic>.from(data['user'] as Map)));
     } catch (_) {
       await _api.sessionStore.clear();
       state = const AuthState(status: AuthStatus.signedOut);

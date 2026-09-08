@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,7 +14,7 @@ import 'auth/auth_controller.dart';
 
 final draftStoreProvider = Provider<DraftStore>((_) => DraftStore());
 final problemsProvider = FutureProvider.autoDispose<List<Problem>>(
-    (ref) => ref.read(apiClientProvider).myProblems());
+    (ref) => ref.read(apiClientProvider).mySubmissions());
 
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
@@ -338,11 +340,12 @@ class ReportScreen extends ConsumerStatefulWidget {
 class _ReportScreenState extends ConsumerState<ReportScreen> {
   final title = TextEditingController();
   final description = TextEditingController();
-  String domain = 'other';
-  String? district;
+  final location = TextEditingController();
+  String domain = 'Public safety';
   Position? position;
   List<String> attachments = [];
   bool busy = false;
+  int? savedDraftId;
   late final String submissionKey =
       'mobile-${DateTime.now().microsecondsSinceEpoch}';
 
@@ -359,7 +362,8 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
     description.text = draft.description;
     setState(() {
       domain = draft.domain;
-      district = draft.districtId;
+      location.text = draft.districtId ?? '';
+      savedDraftId = draft.id;
     });
   }
 
@@ -367,40 +371,69 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
   void dispose() {
     title.dispose();
     description.dispose();
+    location.dispose();
     super.dispose();
   }
 
   Future<void> saveDraft() async {
-    await ref.read(draftStoreProvider).save(Draft(
+    final draftId = await ref.read(draftStoreProvider).save(Draft(
+        id: savedDraftId,
         title: title.text,
         description: description.text,
         domain: domain,
-        districtId: district,
+        districtId: location.text.trim().isEmpty ? null : location.text.trim(),
         latitude: position?.latitude,
         longitude: position?.longitude));
+    savedDraftId = draftId;
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Draft saved on this device.')));
     }
   }
 
+  Future<void> _addAttachment(String filePath) async {
+    if (attachments.length >= 5) {
+      if (mounted) _show('You can attach up to five files.');
+      return;
+    }
+    final file = File(filePath);
+    if (!await file.exists()) {
+      if (mounted) _show('This file is no longer available on your device.');
+      return;
+    }
+    if (await file.length() > 100 * 1024 * 1024) {
+      if (mounted) _show('Each attachment must be 100 MB or smaller.');
+      return;
+    }
+    if (mounted) setState(() => attachments = [...attachments, filePath]);
+  }
+
+  void _show(String message) => ScaffoldMessenger.of(context)
+      .showSnackBar(SnackBar(content: Text(message)));
+
   Future<void> selectPhoto() async {
     final file = await ImagePicker()
         .pickImage(source: ImageSource.gallery, imageQuality: 80);
-    if (file != null && mounted) {
-      setState(() => attachments = [...attachments, file.path]);
-    }
+    if (file != null) await _addAttachment(file.path);
   }
 
   Future<void> selectDocument() async {
     final files = await FilePicker.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png', 'mp4']);
-    if (files.isNotEmpty && mounted) {
-      setState(() => attachments = [
-            ...attachments,
-            files.single.path ?? files.single.name
-          ]);
+        allowedExtensions: [
+          'pdf',
+          'doc',
+          'docx',
+          'jpg',
+          'jpeg',
+          'png',
+          'webp',
+          'mp4',
+          'webm',
+          'mov'
+        ]);
+    for (final file in files) {
+      if (file.path != null) await _addAttachment(file.path!);
     }
   }
 
@@ -414,7 +447,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text(
-                'Location permission denied. You can continue with district and locality.')));
+                'Location permission denied. Enter a locality or landmark manually.')));
       }
       return;
     }
@@ -424,6 +457,10 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
       if (mounted) {
         setState(() {
           position = value;
+          if (location.text.trim().isEmpty) {
+            location.text =
+                '${value.latitude.toStringAsFixed(5)}, ${value.longitude.toStringAsFixed(5)}';
+          }
           busy = false;
         });
       }
@@ -438,30 +475,30 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
   }
 
   Future<void> submit() async {
-    if (title.text.trim().length < 10 || description.text.trim().length < 30) {
+    if (title.text.trim().length < 3 || description.text.trim().length < 20) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text(
-              'Title needs 10 characters and description needs 30 characters.')));
+              'Title needs 3 characters and description needs 20 characters.')));
+      return;
+    }
+    if (location.text.trim().isEmpty) {
+      _show(
+          'Add a locality, landmark, or your current location before submitting.');
       return;
     }
     setState(() => busy = true);
     try {
       final api = ref.read(apiClientProvider);
-      final attachmentIds = <String>[];
-      for (final path in attachments) {
-        if (path.contains('\\') || path.contains('/')) {
-          attachmentIds.add(await api.uploadAttachment(path));
-        }
-      }
-      await api.createProblem(
+      await api.createSubmission(
           title: title.text.trim(),
           description: description.text.trim(),
           domain: domain,
-          districtId: district,
-          latitude: position?.latitude,
-          longitude: position?.longitude,
-          attachmentIds: attachmentIds,
+          location: location.text.trim(),
+          attachmentPaths: attachments,
           idempotencyKey: submissionKey);
+      if (savedDraftId != null) {
+        await ref.read(draftStoreProvider).delete(savedDraftId!);
+      }
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(const SnackBar(content: Text('Report submitted.')));
@@ -492,7 +529,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
       body: ListView(padding: const EdgeInsets.all(20), children: [
         TextField(
             controller: title,
-            maxLength: 150,
+            maxLength: 120,
             decoration: InputDecoration(
                 labelText: localized(ref.watch(appLanguageProvider),
                     'What is the challenge?', 'समस्या क्या है?'),
@@ -505,7 +542,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
             controller: description,
             minLines: 5,
             maxLines: 9,
-            maxLength: 10000,
+            maxLength: 2000,
             decoration: InputDecoration(
                 labelText: localized(ref.watch(appLanguageProvider),
                     'Describe what is happening', 'क्या हो रहा है, बताएँ'))),
@@ -516,32 +553,28 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                 labelText: localized(
                     ref.watch(appLanguageProvider), 'Domain', 'क्षेत्र')),
             items: const [
-              'other',
-              'education',
-              'healthcare',
-              'agriculture',
-              'water',
-              'sanitation',
-              'environment',
-              'energy',
-              'urban_development',
-              'accessibility',
-              'public_administration',
-              'rural_livelihoods'
+              'Public safety',
+              'Roads and transport',
+              'Water and sanitation',
+              'Health and education',
+              'Environment',
+              'Other'
             ]
-                .map((value) => DropdownMenuItem(
-                    value: value, child: Text(value.replaceAll('_', ' '))))
+                .map((value) =>
+                    DropdownMenuItem(value: value, child: Text(value)))
                 .toList(),
             onChanged: (value) => setState(() => domain = value ?? domain)),
         const SizedBox(height: 12),
         TextField(
-            decoration: InputDecoration(
-                labelText: localized(
-                    ref.watch(appLanguageProvider),
-                    'District or locality (optional)',
-                    'जिला या स्थान (वैकल्पिक)')),
-            onChanged: (value) =>
-                district = value.trim().isEmpty ? null : value.trim()),
+          decoration: InputDecoration(
+              labelText: localized(ref.watch(appLanguageProvider),
+                  'Locality, landmark, or address', 'स्थान या पहचान चिह्न'),
+              helperText: localized(
+                  ref.watch(appLanguageProvider),
+                  'Required so the review team can find the issue.',
+                  'समीक्षा टीम को समस्या खोजने के लिए यह आवश्यक है।')),
+          controller: location,
+        ),
         const SizedBox(height: 12),
         Row(children: [
           Expanded(
@@ -569,8 +602,21 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                 'Add document or video', 'दस्तावेज़ या वीडियो जोड़ें'))),
         if (attachments.isNotEmpty) ...[
           const SizedBox(height: 8),
-          Text('${attachments.length} attachment(s) selected',
-              style: Theme.of(context).textTheme.bodySmall)
+          Text('${attachments.length}/5 attachment(s) selected',
+              style: Theme.of(context).textTheme.bodySmall),
+          ...attachments.map((filePath) => ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.insert_drive_file_outlined),
+              title: Text(filePath.split(Platform.pathSeparator).last,
+                  maxLines: 1, overflow: TextOverflow.ellipsis),
+              trailing: IconButton(
+                  icon: const Icon(Icons.close),
+                  tooltip: 'Remove attachment',
+                  onPressed: busy
+                      ? null
+                      : () => setState(() => attachments = attachments
+                          .where((item) => item != filePath)
+                          .toList()))))
         ],
         const SizedBox(height: 24),
         FilledButton(
@@ -638,7 +684,21 @@ class MyReportsScreen extends ConsumerWidget {
             Text(item.description),
             const SizedBox(height: 16),
             Text('Status: ${item.status}'),
-            Text('Domain: ${item.domain}')
+            Text('Domain: ${item.domain}'),
+            if (item.location.isNotEmpty) Text('Location: ${item.location}'),
+            Text('Follow-up notes: ${item.comments}'),
+            if (item.attachments.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              const Text('Evidence'),
+              ...item.attachments.map((attachment) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(attachment.type.startsWith('video/')
+                        ? Icons.videocam_outlined
+                        : Icons.attach_file),
+                    title: Text(attachment.name),
+                    subtitle: Text(attachment.type),
+                  )),
+            ]
           ])));
 }
 

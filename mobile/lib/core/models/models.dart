@@ -28,6 +28,9 @@ class Problem {
       required this.description,
       required this.status,
       required this.domain,
+      required this.location,
+      required this.attachments,
+      required this.comments,
       required this.createdAt});
 
   final String id;
@@ -35,6 +38,9 @@ class Problem {
   final String description;
   final String status;
   final String domain;
+  final String location;
+  final List<SubmissionAttachment> attachments;
+  final int comments;
   final DateTime? createdAt;
 
   factory Problem.fromJson(Map<String, dynamic> json) => Problem(
@@ -43,7 +49,38 @@ class Problem {
         description: '${json['description'] ?? ''}',
         status: '${json['status'] ?? 'submitted'}',
         domain: '${json['domain'] ?? 'other'}',
+        location: '${json['location'] ?? ''}',
+        attachments: (json['attachments'] as List<dynamic>? ?? const [])
+            .map((item) => SubmissionAttachment.fromJson(
+                Map<String, dynamic>.from(item as Map)))
+            .toList(),
+        comments: (json['comments'] as num?)?.toInt() ?? 0,
         createdAt: DateTime.tryParse('${json['createdAt'] ?? ''}'),
+      );
+}
+
+class SubmissionAttachment {
+  const SubmissionAttachment({
+    required this.id,
+    required this.name,
+    required this.type,
+    required this.size,
+    required this.previewUrl,
+  });
+
+  final String id;
+  final String name;
+  final String type;
+  final int size;
+  final String previewUrl;
+
+  factory SubmissionAttachment.fromJson(Map<String, dynamic> json) =>
+      SubmissionAttachment(
+        id: '${json['id'] ?? ''}',
+        name: '${json['name'] ?? 'Attachment'}',
+        type: '${json['type'] ?? ''}',
+        size: (json['size'] as num?)?.toInt() ?? 0,
+        previewUrl: '${json['previewUrl'] ?? ''}',
       );
 }
 

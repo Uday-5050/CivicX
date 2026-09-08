@@ -1,19 +1,21 @@
 # Civix mobile
 
-Flutter citizen app for Civix. The app is intentionally scoped to citizen journeys in the first release: sign in, create a problem report, save drafts, attach evidence, track submitted problems, read notifications and manage the profile.
+Flutter citizen app for Civix. It supports citizen sign-in, local drafts, Cloudinary-backed report evidence uploads, and tracking reports submitted through the shared backend.
 
 ## Prerequisites
 
-Install Flutter 3.24 or newer and run `flutter doctor`. This repository was scaffolded without a Flutter executable available in the current environment, so run `flutter create .` inside this folder once to generate the platform runners before building an APK.
+Install Flutter 3.24 or newer and run `flutter doctor`.
 
 ## Run
 
 ```powershell
 flutter pub get
-flutter run --dart-define=API_BASE_URL=http://10.0.2.2:4000/api
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:5000/api
 ```
 
-Use `http://10.0.2.2:4000/api` for the Android emulator, a reachable LAN address for a physical Android device, and `http://127.0.0.1:4000/api` for an iOS simulator on macOS. Release builds must use HTTPS.
+Use `http://10.0.2.2:5000/api` for the Android emulator. For a physical Android device, replace `10.0.2.2` with the computer's LAN IP address, for example `http://192.168.1.5:5000/api`, and keep the backend running. Release builds must use HTTPS.
+
+The app sends photos, videos, PDFs, DOC, and DOCX files in the report submission request. The backend uploads them to Cloudinary; Cloudinary credentials belong only in `server/backend/.env`, never in the Flutter app.
 
 ## Checks
 
