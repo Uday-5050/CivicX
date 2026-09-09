@@ -46,6 +46,31 @@ router.get("/submissions", async (_req, res, next) => {
   } catch (error) { next(error); }
 });
 
+router.get("/moderation", async (_req, res, next) => {
+  try {
+    const reports = await Submission.find({ status: { $in: ["submitted", "under_review"] } }).sort({ createdAt: -1 }).limit(100);
+    sendSuccess(res, reports.map((report) => ({ id: report._id.toString(), title: report.title, reason: report.status === "submitted" ? "Awaiting administrator review" : "Under administrator review", reporter: "Citizen report", status: "open", createdAt: report.createdAt })));
+  } catch (error) { next(error); }
+});
+
+router.post("/moderation/:id", async (req, res, next) => {
+  try {
+    const status = String(req.body?.status); if (status !== "resolved" && status !== "dismissed") throw ValidationError("Status must be resolved or dismissed");
+    const submission = await Submission.findById(id(String(req.params.id), "Submission")); if (!submission) throw NotFoundError("Submission not found");
+    if (status === "resolved" && submission.status === "submitted") { submission.status = "under_review"; await submission.save(); }
+    sendSuccess(res, { id: submission._id.toString(), title: submission.title, reason: status === "resolved" ? "Reviewed; ready to route" : "Retained without routing", reporter: "Citizen report", status, createdAt: submission.createdAt });
+  } catch (error) { next(error); }
+});
+
+router.get("/audit", async (_req, res, next) => { try { sendSuccess(res, []); } catch (error) { next(error); } });
+
+router.get("/reports", async (_req, res, next) => {
+  try {
+    const rows = await Submission.aggregate([{ $group: { _id: { domain: "$domain", district: "$location", status: "$status" }, count: { $sum: 1 } } }, { $sort: { "_id.domain": 1 } }]);
+    sendSuccess(res, rows.map((row) => ({ id: `${row._id.domain}-${row._id.district}-${row._id.status}`, domain: row._id.domain, district: row._id.district, status: row._id.status, count: row.count })));
+  } catch (error) { next(error); }
+});
+
 // The moderation queue is deliberately non-destructive: administrators can
 // review and route records without deleting a citizen's original report.
 router.post("/submissions/:id/review", async (req, res, next) => {
