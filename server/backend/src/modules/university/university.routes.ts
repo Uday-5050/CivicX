@@ -28,6 +28,7 @@ router.post("/challenges", requireRole("admin"), validate(createChallengeSchema)
   try {
     const institution = await Institution.findOne({ _id: req.body.institutionId, type: "university", accountStatus: "active" });
     if (!institution) throw ValidationError("Target university must be active");
+    if (req.body.industryId && !await Institution.exists({ _id: req.body.industryId, type: "industry", accountStatus: "active" })) throw ValidationError("Industry partner must be active");
     sendSuccess(res, serialize(await UniversityChallenge.create(req.body)), 201);
   } catch (error) { next(error); }
 });

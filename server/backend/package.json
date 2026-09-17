@@ -9,7 +9,8 @@
     "start": "node dist/server.js",
     "lint": "eslint src/ tests/",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "create:government": "tsx src/scripts/create-government.ts"
   },
   "keywords": [
     "civicx",

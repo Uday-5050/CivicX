@@ -16,6 +16,8 @@ export const decisionSchema = z.object({
   }
 });
 export const createChallengeSchema = z.object({
+  district: text.optional(),
+  industryId: z.string().regex(/^[a-f\d]{24}$/i).optional(),
   institutionId: z.string().regex(/^[a-f\d]{24}$/i),
   title: text, summary: z.string().trim().min(1).max(10000), domain: text,
   priority: z.enum(["low", "medium", "high"]), department: text, organization: text,

@@ -4,7 +4,7 @@
 declare namespace Express {
     interface Request {
       id: string;
-      auth?: { userId: string; role: "citizen" | "university" | "industry" | "admin" };
+      auth?: { userId: string; role: "citizen" | "university" | "industry" | "admin" | "government" };
   }
 }
 

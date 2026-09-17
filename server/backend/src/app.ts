@@ -13,6 +13,8 @@ import submissionRoutes from "./modules/submissions/submission.routes";
 // ──────────────────────────────────────────────
 // Express application (separated from server.ts)
 // ──────────────────────────────────────────────
+import governmentRoutes from "./modules/government/government.routes";
+
 const app = express();
 
 // ── Middleware chain (order matters) ──────────
@@ -28,6 +30,7 @@ app.use("/api/health", healthRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/university", universityRoutes);
 app.use("/api/submissions", submissionRoutes);
+app.use("/api/government", governmentRoutes);
 
 // ── 404 handler ───────────────────────────────
 app.use((req, res) => {

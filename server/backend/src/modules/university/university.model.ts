@@ -3,6 +3,8 @@ import type { ChallengeInput, Proposal } from "./university.schemas";
 export interface ChallengeDocument extends Omit<ChallengeInput, "institutionId"> {
   institutionId: string;
   decision: "pending" | "accepted" | "declined" | "info_requested";
+  governmentStage?: "submitted" | "under_review" | "in_progress" | "pilot" | "deployed";
+  reviews: Array<{ id: string; reviewerId: string; stage: string; feedback: string; createdAt: Date }>;
   version: number;
   proposal?: Proposal;
   project?: { id: string; status: "active"; createdAt: Date };
@@ -14,6 +16,9 @@ export interface ChallengeDocument extends Omit<ChallengeInput, "institutionId">
 const proposal = new Schema({ approach: String, timeline: String, mentorId: String, studentIds: [String] }, { _id: false });
 const schema = new Schema<ChallengeDocument>({
   institutionId: { type: String, required: true, index: true },
+  district: String, industryId: String,
+  governmentStage: { type: String, enum: ["submitted", "under_review", "in_progress", "pilot", "deployed"] },
+  reviews: { type: [new Schema({ id: String, reviewerId: String, stage: String, feedback: String, createdAt: Date }, { _id: false })], default: [] },
   title: { type: String, required: true }, summary: { type: String, required: true },
   domain: { type: String, required: true }, priority: { type: String, enum: ["low", "medium", "high"], required: true },
   department: { type: String, required: true }, organization: { type: String, required: true },

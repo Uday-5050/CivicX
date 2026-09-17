@@ -286,7 +286,7 @@ export interface GovUniversityPerformance {
 export interface GovIndustryEngagement {
   id: string;
   name: string;
-  type: 'large' | 'startup' | 'msme' | 'csr';
+  type: 'large' | 'startup' | 'msme' | 'csr' | 'unclassified';
   fundingLakhs: number;
   mentorshipHours: number;
   prototypes: number;

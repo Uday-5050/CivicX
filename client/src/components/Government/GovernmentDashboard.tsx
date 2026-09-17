@@ -105,7 +105,13 @@ export default function GovernmentDashboard() {
     setNotice('')
     try {
       const result = await exportGovReport(type)
-      setNotice(`Report generated: ${result.filename}`)
+      const link = document.createElement('a')
+      link.href = result.url
+      link.download = result.filename
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      setNotice(`Report downloaded: ${result.filename}`)
     } catch {
       setNotice('Export failed. Please try again.')
     } finally {
