@@ -1,0 +1,24 @@
+import { randomUUID } from "node:crypto";
+import { Router } from "express";
+import { z } from "zod";
+import { requireAuth, requireRole } from "../auth/auth.middleware";
+import { User } from "../auth/user.model";
+import { Institution } from "../auth/institution.model";
+import { Project } from "../projects/project.model";
+import { Collaboration } from "./collaboration.model";
+import { ConflictError, ForbiddenError, NotFoundError } from "../../utils/errors";
+import { sendSuccess } from "../../utils/response";
+
+const router = Router();
+const requestSchema = z.object({ projectId: z.string().uuid(), collaborationType: z.enum(["mentorship", "funding", "prototyping", "deployment", "technology_transfer"]), message: z.string().trim().min(10).max(5000) }).strict();
+const decisionSchema = z.object({ status: z.enum(["accepted", "declined"]), version: z.number().int().positive() }).strict();
+async function institutionFor(userId: string, type: "industry" | "university") { const user = await User.findById(userId); const institution = user?.institutionId ? await Institution.findOne({ _id: user.institutionId, type, accountStatus: "active" }) : null; if (!institution) throw ForbiddenError(`An active ${type} institution is required`); return institution; }
+function serialize(row: any) { const raw = row.toObject ? row.toObject() : row; const { _id, industryInstitutionId: _industryInstitutionId, universityInstitutionId: _universityInstitutionId, ...data } = raw; return { ...data, id: raw.id }; }
+async function serializeWithProject(row: any) { const data = serialize(row); const project = await Project.findOne({ id: data.projectId }).select({ title: 1 }); return { ...data, projectTitle: project?.title ?? "Project" }; }
+
+router.get("/industry/projects", requireAuth, requireRole("industry"), async (_req, res, next) => { try { const projects = await Project.find({ currentStage: { $ne: "deployed" } }).sort({ updatedAt: -1 }); const institutions = await Institution.find({ _id: { $in: projects.map(p => p.institutionId) } }); const nameById = new Map(institutions.map(i => [i._id.toString(), i.name])); sendSuccess(res, projects.map(p => ({ id: p.id, title: p.title, summary: p.summary, domain: p.domain, university: nameById.get(p.institutionId) ?? "University", department: p.department, milestone: p.currentStage, status: p.currentStage === "proposed" ? "open" : p.currentStage === "piloted" ? "pilot_ready" : "in_progress", needs: ["mentorship", "funding", "prototyping", "deployment", "technology_transfer"] }))); } catch (e) { next(e); } });
+router.get("/industry/collaboration-requests", requireAuth, requireRole("industry"), async (req, res, next) => { try { const institution = await institutionFor(req.auth!.userId, "industry"); sendSuccess(res, await Promise.all((await Collaboration.find({ industryInstitutionId: institution._id.toString() }).sort({ createdAt: -1 })).map(serializeWithProject))); } catch (e) { next(e); } });
+router.post("/industry/collaboration-requests", requireAuth, requireRole("industry"), async (req, res, next) => { try { const input = requestSchema.parse(req.body); const institution = await institutionFor(req.auth!.userId, "industry"); const project = await Project.findOne({ id: input.projectId }); if (!project) throw NotFoundError("Project not found"); const organization = institution.name; try { const row = await Collaboration.create({ id: randomUUID(), projectId: project.id, industryInstitutionId: institution._id.toString(), universityInstitutionId: project.institutionId, organization, collaborationType: input.collaborationType, message: input.message }); sendSuccess(res, serialize(row), 201); } catch (error: any) { if (error?.code === 11000) throw ConflictError("Your institution already has a request for this project"); throw error; } } catch (e) { next(e); } });
+router.get("/university/collaboration-requests", requireAuth, requireRole("university"), async (req, res, next) => { try { const institution = await institutionFor(req.auth!.userId, "university"); sendSuccess(res, await Promise.all((await Collaboration.find({ universityInstitutionId: institution._id.toString() }).sort({ createdAt: -1 })).map(serializeWithProject))); } catch (e) { next(e); } });
+router.post("/university/collaboration-requests/:id/decision", requireAuth, requireRole("university"), async (req, res, next) => { try { const input = decisionSchema.parse(req.body); const institution = await institutionFor(req.auth!.userId, "university"); const row = await Collaboration.findOne({ id: String(req.params.id), universityInstitutionId: institution._id.toString() }); if (!row) throw NotFoundError("Collaboration request not found"); if (row.status !== "pending" || row.version !== input.version) throw ConflictError("This request has changed. Refresh and retry."); row.status = input.status; row.version += 1; await row.save(); sendSuccess(res, serialize(row)); } catch (e) { next(e); } });
+export default router;

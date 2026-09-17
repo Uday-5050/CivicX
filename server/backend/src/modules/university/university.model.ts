@@ -2,6 +2,7 @@
 import type { ChallengeInput, Proposal } from "./university.schemas";
 export interface ChallengeDocument extends Omit<ChallengeInput, "institutionId"> {
   institutionId: string;
+  sourceSubmissionId?: string;
   decision: "pending" | "accepted" | "declined" | "info_requested";
   governmentStage?: "submitted" | "under_review" | "in_progress" | "pilot" | "deployed";
   reviews: Array<{ id: string; reviewerId: string; stage: string; feedback: string; createdAt: Date }>;
@@ -19,6 +20,7 @@ const schema = new Schema<ChallengeDocument>({
   district: String, industryId: String,
   governmentStage: { type: String, enum: ["submitted", "under_review", "in_progress", "pilot", "deployed"] },
   reviews: { type: [new Schema({ id: String, reviewerId: String, stage: String, feedback: String, createdAt: Date }, { _id: false })], default: [] },
+  sourceSubmissionId: { type: String, index: true, sparse: true },
   title: { type: String, required: true }, summary: { type: String, required: true },
   domain: { type: String, required: true }, priority: { type: String, enum: ["low", "medium", "high"], required: true },
   department: { type: String, required: true }, organization: { type: String, required: true },

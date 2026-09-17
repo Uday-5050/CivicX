@@ -31,6 +31,7 @@ export default function UniversityInbox() {
     setBusy(true); setNotice('')
     try {
       const updated = await decideUniversityChallenge(selected.id, decision, selected.version, decision === 'accepted' ? { approach, timeline, mentorId, studentIds } : undefined)
+      if (updated.projectId) localStorage.setItem('civicx_project_id', updated.projectId)
       setChallenges((current) => current.map((item) => item.id === updated.id ? updated : item)); setSelected(updated); setProposalOpen(false); setNotice(decision === 'accepted' ? 'Project created and proposal saved.' : decision === 'declined' ? 'Challenge declined.' : 'Request for more information recorded.')
     } catch (error) { if (error instanceof Error && error.name === 'ConflictError') { setNotice('This decision is stale. The latest challenge was loaded again.'); await load() } else setNotice('Unable to save the decision. Please retry.') }
     finally { setBusy(false) }

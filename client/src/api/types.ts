@@ -43,7 +43,7 @@ export interface HealthData {
 }
 
 export type AnalysisStatus = 'pending' | 'completed' | 'failed';
-export type SubmissionStatus = 'draft' | 'submitted' | 'under_review' | 'resolved';
+export type SubmissionStatus = 'draft' | 'submitted' | 'under_review' | 'assigned' | 'in_progress' | 'resolved';
 
 export interface SubmissionAttachment {
   id: string;
@@ -107,6 +107,7 @@ export interface UniversityChallenge {
     mentorId: string;
     studentIds: string[];
   };
+  projectId?: string;
   createdAt: string;
 }
 
