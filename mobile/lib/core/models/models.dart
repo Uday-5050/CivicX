@@ -31,6 +31,7 @@ class Problem {
       required this.location,
       required this.attachments,
       required this.comments,
+      required this.analysis,
       required this.createdAt});
 
   final String id;
@@ -41,6 +42,7 @@ class Problem {
   final String location;
   final List<SubmissionAttachment> attachments;
   final int comments;
+  final ProblemAnalysis analysis;
   final DateTime? createdAt;
 
   factory Problem.fromJson(Map<String, dynamic> json) => Problem(
@@ -55,7 +57,42 @@ class Problem {
                 Map<String, dynamic>.from(item as Map)))
             .toList(),
         comments: (json['comments'] as num?)?.toInt() ?? 0,
+        analysis: ProblemAnalysis.fromJson(
+            Map<String, dynamic>.from(json['analysis'] as Map? ?? const {})),
         createdAt: DateTime.tryParse('${json['createdAt'] ?? ''}'),
+      );
+}
+
+class ProblemAnalysis {
+  const ProblemAnalysis(
+      {required this.status,
+      this.category,
+      this.priority,
+      this.summary,
+      this.provider,
+      this.revision,
+      this.error});
+
+  final String status;
+  final String? category;
+  final String? priority;
+  final String? summary;
+  final String? provider;
+  final int? revision;
+  final String? error;
+
+  bool get isTerminal =>
+      const {'completed', 'fallback', 'failed'}.contains(status);
+
+  factory ProblemAnalysis.fromJson(Map<String, dynamic> json) =>
+      ProblemAnalysis(
+        status: '${json['status'] ?? 'pending'}',
+        category: json['category'] as String?,
+        priority: json['priority'] as String?,
+        summary: json['summary'] as String?,
+        provider: json['provider'] as String?,
+        revision: (json['revision'] as num?)?.toInt(),
+        error: json['error'] as String?,
       );
 }
 

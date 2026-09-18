@@ -28,6 +28,15 @@ const config = {
 
   // AI adapter
   aiProvider: process.env.AI_PROVIDER || "mock",
+  aiApiUrl: process.env.AI_API_URL || "",
+  aiApiKey: process.env.AI_API_KEY || "",
+  aiModel: process.env.AI_MODEL || "gemini-3.5-flash-lite",
+  aiTimeoutMs: parseInt(process.env.AI_TIMEOUT_MS || "12000", 10),
+  aiMaxInputChars: parseInt(process.env.AI_MAX_INPUT_CHARS || "6000", 10),
+  aiWorkerEnabled: process.env.AI_WORKER_ENABLED !== "false",
+  aiWorkerPollMs: parseInt(process.env.AI_WORKER_POLL_MS || "2000", 10),
+  aiMaxAttempts: parseInt(process.env.AI_MAX_ATTEMPTS || "3", 10),
+  aiLeaseMs: parseInt(process.env.AI_LEASE_MS || "30000", 10),
 
   // CORS
   corsOrigins: (process.env.CORS_ORIGINS || "http://localhost:5173,http://127.0.0.1:5173")

@@ -12,6 +12,10 @@ import submissionRoutes from "./modules/submissions/submission.routes";
 import adminRoutes from "./modules/admin/admin.routes";
 import projectRoutes from "./modules/projects/project.routes";
 import industryRoutes from "./modules/industry/industry.routes";
+import institutionRoutes, { institutionAdminRouter } from "./modules/institutions/institution.routes";
+import publicSubmissionRoutes from "./modules/submissions/public-submission.routes";
+import notificationRoutes from "./modules/notifications/notification.routes";
+import analyticsRoutes from "./modules/admin/analytics.routes";
 
 // ──────────────────────────────────────────────
 // Express application (separated from server.ts)
@@ -30,12 +34,17 @@ app.use(express.urlencoded({ extended: true }));
 
 // ── Routes ────────────────────────────────────
 app.use("/api/health", healthRoutes);
+app.use("/api/public", publicSubmissionRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/university", universityRoutes);
 app.use("/api/submissions", submissionRoutes);
 app.use("/api/government", governmentRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/admin/analytics", analyticsRoutes);
 app.use("/api/projects", projectRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/institutions", institutionRoutes);
+app.use("/api/admin", institutionAdminRouter);
 app.use("/api", industryRoutes);
 
 // ── 404 handler ───────────────────────────────

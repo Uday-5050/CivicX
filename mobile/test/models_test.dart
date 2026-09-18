@@ -9,12 +9,22 @@ void main() {
       'description': 'The pump has been broken for two weeks.',
       'domain': 'water',
       'status': 'submitted',
+      'analysis': {
+        'status': 'fallback',
+        'category': 'Public services',
+        'priority': 'medium',
+        'provider': 'rules-fallback',
+        'revision': 2,
+      },
       'createdAt': '2026-09-06T10:00:00Z',
     });
 
     expect(problem.id, 'p-1');
     expect(problem.status, 'submitted');
     expect(problem.createdAt?.year, 2026);
+    expect(problem.analysis.status, 'fallback');
+    expect(problem.analysis.provider, 'rules-fallback');
+    expect(problem.analysis.revision, 2);
   });
 
   test('draft round trips its local persistence shape', () {

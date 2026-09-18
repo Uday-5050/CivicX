@@ -70,12 +70,13 @@ Each module contains its own routes, controller, service, model, and validation 
 
 **Context:** The prompt specifies AI starts as an adapter inside the backend. No fourth developer or Python service required.
 
-**Decision:** AI functionality lives in `server/backend/src/adapters/ai/`. Initially it is a stub that returns mock responses. When ready, it will call external AI APIs (e.g., Google Gemini, OpenAI) through this adapter.
+**Decision:** AI functionality lives in `server/backend/src/adapters/ai/`. The rules classifier remains the default safety baseline. An optional OpenAI-compatible provider is called server-side with redacted, length-capped text and strict JSON validation; provider failures fall back to rules without blocking a report.
 
 **Consequences:**
-- No external AI service dependency for Task 01
+- No external AI service dependency for the default workflow
 - Other modules call the adapter through a clean interface
-- Easy to swap AI providers without changing business logic
+- Provider credentials never enter the client or repository
+- Provider output is advisory and cannot directly reject, route, resolve, or advance a record
 
 ---
 

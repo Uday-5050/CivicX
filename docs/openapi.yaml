@@ -14,6 +14,422 @@ servers:
   - url: https://api.civicx.com
     description: Production (future)
 
+# The workflow operations below remain proposed until their individual task is
+# implemented. Tasks 02, 05, 06, and 07 are also listed separately as
+# implemented capability, classification, matching, routing, acceptance,
+# project access/proposal, and industry collaboration operations.
+x-civicx-proposed-contract:
+  status: proposed
+  source: docs/institutional-workflow-plan.md
+  compatibility:
+    preservePrefix: /api
+    preserveEnvelope: "{success, data, meta}"
+    preserveClientSubmissionEndpoint: /api/submissions
+    preserveProjectIds: UUID strings
+  progressStatuses:
+    submission: [submitted, under_review, assigned, in_progress, resolved]
+    project: [proposed, funded, prototyping, piloted, deployed]
+  separateStateDimensions:
+    disposition: [active, duplicate, rejected, referred]
+    routing: [pending, accepted, declined, cancelled]
+    collaboration: [pending, accepted, declined, withdrawn]
+    review: [pending, approved, rejected]
+  rules:
+    - AI suggestions never directly reject, merge, assign, resolve, or advance records.
+    - One source submission can have routing history but at most one active assignment and one project.
+    - Acceptance, project creation, membership grant, report status update, and closure require transactions.
+    - Evidence approval does not advance a project; the project lead advances with approvedReviewId and expectedVersion.
+    - Only an administrator can validate outcome evidence and resolve the citizen report.
+    - Private attachments and project documents require authorization on every download.
+  proposedOperations:
+    - method: GET
+      path: /api/admin/submissions/{submissionId}
+      roles: [admin]
+      purpose: Review original report, analysis, attachments, duplicate candidates, timeline, and routing history.
+    - method: POST
+      path: /api/admin/submissions/{submissionId}/review
+      roles: [admin]
+      purpose: Persist category/priority/disposition/review decision or information request.
+    - method: GET
+      path: /api/admin/university-recommendations/{submissionId}
+      roles: [admin]
+      purpose: Return explainable eligible matches with score components and capacity snapshot.
+    - method: POST
+      path: /api/admin/submissions/{submissionId}/route
+      roles: [admin]
+      purpose: Create one audited routing assignment to an active university and department.
+    - method: GET
+      path: /api/university/assignments
+      roles: [university]
+      purpose: List assignments for the authenticated institution.
+    - method: POST
+      path: /api/university/assignments/{assignmentId}/decision
+      roles: [university]
+      purpose: Accept, decline with reason, or request information using expectedVersion.
+    - method: GET
+      path: /api/projects
+      roles: [university, industry, admin]
+      purpose: List only projects visible to the authenticated user.
+    - method: POST
+      path: /api/projects/{projectId}/proposals
+      roles: [university]
+      purpose: Create an immutable proposal revision.
+    - method: POST
+      path: /api/projects/{projectId}/proposals/{proposalId}/review
+      roles: [admin]
+      purpose: Approve or return a proposal with review reasons.
+    - method: GET
+      path: /api/industry/opportunities
+      roles: [industry, university, admin]
+      purpose: Discover only university-published, redacted opportunities.
+    - method: POST
+      path: /api/industry/opportunities/{opportunityId}/offers
+      roles: [industry]
+      purpose: Submit a support offer with responsibilities and cash/in-kind details.
+    - method: POST
+      path: /api/university/offers/{offerId}/decision
+      roles: [university]
+      purpose: Accept or decline an offer and grant access exactly once.
+    - method: POST
+      path: /api/projects/{projectId}/milestones/{stage}/evidence
+      roles: [university, authorized-project-member]
+      purpose: Submit an immutable evidence revision for the current stage.
+    - method: POST
+      path: /api/admin/projects/{projectId}/milestone-reviews
+      roles: [admin]
+      purpose: Approve or reject a specific evidence revision.
+    - method: POST
+      path: /api/projects/{projectId}/milestones/{stage}/advance
+      roles: [project-lead]
+      purpose: Advance exactly one stage using approvedReviewId and expectedVersion.
+    - method: POST
+      path: /api/admin/projects/{projectId}/close
+      roles: [admin]
+      purpose: Validate deployment outcome evidence and resolve the source submission atomically.
+    - method: GET
+      path: /api/admin/submissions/{submissionId}/analysis
+      roles: [admin]
+      purpose: Return durable analysis job state, safe provider/fallback metadata, the current suggestion, and revision history.
+    - method: POST
+      path: /api/admin/submissions/{submissionId}/analysis/retry
+      roles: [admin]
+      purpose: Request one bounded, idempotent analysis retry using an expected analysis revision.
+    - method: GET
+      path: /api/projects/{projectId}/milestone-evidence
+      roles: [authorized-project-member, admin]
+      purpose: Return the authorized immutable evidence revisions for a project.
+    - method: GET
+      path: /api/projects/{projectId}/milestone-reviews
+      roles: [authorized-project-member, admin]
+      purpose: Return the authorized milestone review history for a project.
+  websiteIntegrationW01:
+    status: documented
+    source: docs/tasks/website-task-w01-contract-inventory.md
+    canonicalRoles: [citizen, university, industry, admin]
+    canonicalSubmissionStatuses: [submitted, under_review, assigned, in_progress, resolved]
+    canonicalDispositions: [active, duplicate, rejected, referred]
+    canonicalProjectStages: [proposed, funded, prototyping, piloted, deployed]
+    canonicalOfferNeeds: [mentorship, funding, prototyping, deployment, technology_transfer]
+    compatibilityGaps:
+      - legacyClientUniversityChallenges
+      - legacyClientIndustryCollaborationRequests
+      - unsupportedGovernmentClientRoutes
+      - localStorageOnlyProjectNavigation
+      - synchronousRulesPreviewOnDraftAndSubmission
+    taxonomyDecision:
+      priorityWireValues: [low, medium, high]
+      categoryWireValues: [infrastructure, safety, environment, transportation, community, education, health, governance, other]
+      criticalPriorityRequiresReviewedSchemaChange: true
+  implementedTask02:
+    status: implemented
+    operations:
+      - method: GET
+        path: /api/institutions/me/profile
+        roles: [university, industry]
+      - method: PATCH
+        path: /api/institutions/me/profile
+        roles: [university, industry]
+      - method: GET
+        path: /api/institutions/me/roster
+        roles: [university, industry]
+      - method: PATCH
+        path: /api/admin/institutions/{institutionId}/profile
+        roles: [admin]
+      - method: GET
+        path: /api/admin/institutions/{institutionId}/roster
+        roles: [admin]
+      - method: POST
+        path: /api/admin/institutions/{institutionId}/roster
+        roles: [admin]
+      - method: PATCH
+        path: /api/admin/institutions/{institutionId}/roster/{userId}
+        roles: [admin]
+    profileFields: [description, domains, expertise, facilities, serviceAreas, departments, maxActiveProjects, acceptingWork, profileStatus]
+    membershipRoles: [coordinator, mentor, student, partner]
+    membershipStatuses: [pending, active, suspended]
+  implementedTask03:
+    status: implemented
+    persistence:
+      auditEvents: durable MongoDB records exposed to administrators through /api/admin/audit
+      notificationOutbox: durable deduplicated records for the background notification worker
+    safeguards:
+      - expectedVersion updates use an atomic database filter and return 409 on stale writes
+      - idempotent creation reuses records after duplicate-key races
+      - multi-record operations can use a MongoDB session transaction
+  implementedTask04:
+    status: implemented
+    operations:
+      - method: GET
+        path: /api/admin/submissions/{submissionId}
+        roles: [admin]
+      - method: POST
+        path: /api/admin/submissions/{submissionId}/review
+        roles: [admin]
+      - method: GET
+        path: /api/submissions/{submissionId}
+        roles: [citizen-owner]
+      - method: GET
+        path: /api/submissions/{submissionId}/timeline
+        roles: [citizen-owner]
+      - method: GET
+        path: /api/public/submissions/{submissionId}/timeline
+        roles: [public]
+    dispositionStatuses: [active, duplicate, rejected, referred]
+    informationRequestStatuses: [open, answered, cancelled]
+  implementedTask05:
+    status: implemented
+    persistence:
+      classificationJobs: one durable job per submission with retry status and attempts
+      classificationResults: one durable result per job with provider and matched signals
+    baselineProvider: rules
+    behavior:
+      - report creation succeeds even when classification fails
+      - repeated job creation is idempotent and repeated processing cannot duplicate results
+      - classification updates analysis only; it never routes or assigns a university
+    outputFields: [category, priority, summary, signals]
+  implementedTask06:
+    status: implemented
+    operations:
+      - method: GET
+        path: /api/admin/university-recommendations/{submissionId}
+        roles: [admin]
+      - method: POST
+        path: /api/admin/submissions/{submissionId}/route
+        roles: [admin]
+    scoreWeights: { domain: 40, expertise: 30, facilities: 15, serviceArea: 10, capacity: 5 }
+    requirements: [active, verified_profile, accepting_work, available_capacity, explainable_match]
+    routingStatuses: [pending, accepted, declined, cancelled]
+    safeguards:
+      - no-match reports remain unassigned unless an administrator records an override reason
+      - one active assignment per submission is enforced by a unique database constraint
+      - capacity reservations are atomically checked so concurrent routes cannot oversubscribe a university
+  implementedTask07:
+    status: implemented
+    operations:
+      - method: GET
+        path: /api/university/assignments
+        roles: [university]
+      - method: POST
+        path: /api/university/assignments/{assignmentId}/decision
+        roles: [university]
+    decisions: [accepted, declined, info_requested]
+    safeguards:
+      - acceptance uses expectedVersion and creates one project with challengeId equal to the assignment id
+      - repeated acceptance returns the existing project and concurrent acceptance cannot create a second project
+      - decline releases the reserved capacity and leaves the report eligible for explicit rerouting
+      - clarification keeps the assignment pending and increments its version
+
+  implementedTask08:
+    status: implemented
+    operations:
+      - method: GET
+        path: /api/projects
+        roles: [university, industry, admin]
+        purpose: List projects visible to the authenticated user.
+      - method: GET
+        path: /api/projects/{projectId}/members
+        roles: [authorized-project-member, admin]
+        purpose: Read the safe project roster.
+      - method: POST
+        path: /api/projects/{projectId}/members
+        roles: [project-lead]
+        purpose: Add a verified roster member with an expected project version.
+      - method: GET
+        path: /api/projects/{projectId}/proposals
+        roles: [authorized-project-member, admin]
+        purpose: Read immutable proposal revisions and review history.
+      - method: POST
+        path: /api/projects/{projectId}/proposals
+        roles: [project-lead, project-mentor]
+        purpose: Create the next immutable proposal revision.
+      - method: POST
+        path: /api/projects/{projectId}/proposals/{proposalId}/review
+        roles: [admin]
+        purpose: Approve or return one submitted proposal revision.
+    membershipRoles: [lead, mentor, student, industry_partner]
+    safeguards:
+      - project visibility requires active project membership, except administrators and accepted industry collaborations
+      - added university users must be active verified roster members of the project institution
+      - duplicate project users and multiple leads are rejected
+      - proposal revisions and reviews are preserved as history; review does not advance project milestones
+  implementedTask09:
+    status: implemented
+    operations:
+      - method: POST
+        path: /api/university/opportunities
+        roles: [project-lead, project-mentor]
+        purpose: Publish one redacted support opportunity for an owned project.
+      - method: GET
+        path: /api/industry/opportunities
+        roles: [industry, university, admin]
+        purpose: Discover published opportunities without private project material.
+      - method: POST
+        path: /api/industry/opportunities/{opportunityId}/offers
+        roles: [industry]
+        purpose: Submit one support offer with responsibilities and optional funding or in-kind details.
+      - method: GET
+        path: /api/university/offers
+        roles: [university]
+        purpose: List support offers addressed to the university institution.
+      - method: POST
+        path: /api/university/offers/{offerId}/decision
+        roles: [university-coordinator, university-mentor]
+        purpose: Accept or decline an offer with an expected version.
+    supportTypes: [mentorship, funding, prototyping, deployment, technology_transfer]
+    safeguards:
+      - one opportunity per project and one offer per industry institution per opportunity
+      - only an owning project lead or mentor can publish an opportunity
+      - acceptance creates one industry_partner access grant and does not advance milestones
+      - stale decisions and concurrent access grants are rejected
+  implementedTask11:
+    status: implemented
+    operations:
+      - method: POST
+        path: /api/projects/{projectId}/milestones/{targetStage}/evidence
+        roles: [project-lead]
+        purpose: Submit an immutable evidence revision for the next stage.
+      - method: POST
+        path: /api/admin/projects/{projectId}/milestone-reviews
+        roles: [admin]
+        purpose: Approve or reject one pending evidence revision without advancing the project.
+      - method: POST
+        path: /api/projects/{projectId}/milestones/{targetStage}/advance
+        roles: [project-lead]
+        purpose: Advance exactly one stage using an approved review ID and expected version.
+      - method: POST
+        path: /api/projects/{projectId}/deliverables
+        roles: [authorized-project-member]
+        purpose: Record an authorized project deliverable.
+      - method: POST
+        path: /api/projects/{projectId}/testRecords
+        roles: [authorized-project-member]
+        purpose: Record an authorized project test result.
+      - method: POST
+        path: /api/projects/{projectId}/ipDisclosures
+        roles: [project-lead, project-mentor]
+        purpose: Record a restricted project IP disclosure.
+    evidenceStatuses: [pending, approved, rejected]
+    safeguards:
+      - only the next stage can receive formal evidence
+      - review does not change currentStage
+      - an approved review can be consumed by one advancement only
+      - entering prototyping updates the linked report to in_progress
+  implementedTask12:
+    status: implemented
+    operations:
+      - method: POST
+        path: /api/admin/projects/{projectId}/close
+        roles: [admin]
+        purpose: Validate deployed outcome evidence and atomically resolve the linked citizen report.
+      - method: POST
+        path: /api/admin/projects/{projectId}/reopen
+        roles: [admin]
+        purpose: Start an audited corrective cycle for a closed project.
+      - method: GET
+        path: /api/admin/projects/{projectId}/closures
+        roles: [admin]
+        purpose: Read append-only close and reopen history.
+    closureStatuses: [open, closed]
+    safeguards:
+      - closure requires deployed stage, approved deployment evidence, outcome validation, and an open linked report
+      - project closure and citizen report resolution are one transaction
+      - closed projects are read-only until an administrator reopens them with a reason
+      - reopening preserves prior closure records and returns the report to in_progress
+  implementedTask13:
+    status: implemented
+    operations:
+      - method: GET
+        path: /api/notifications
+        roles: [authenticated-user]
+        purpose: List the authenticated user's persistent notification inbox.
+      - method: GET
+        path: /api/notifications/unread-count
+        roles: [authenticated-user]
+        purpose: Return the authenticated user's unread notification count.
+      - method: POST
+        path: /api/notifications/read-all
+        roles: [authenticated-user]
+        purpose: Mark all of the authenticated user's notifications as read.
+      - method: POST
+        path: /api/notifications/{notificationId}/read
+        roles: [authenticated-user]
+        purpose: Mark one recipient-owned notification as read.
+      - method: GET
+        path: /api/submissions/{submissionId}/timeline
+        roles: [citizen-owner]
+        purpose: Return the report owner's public activity timeline.
+      - method: GET
+        path: /api/public/submissions/{submissionId}/timeline
+        roles: [public]
+        purpose: Return the redacted public activity timeline.
+    safeguards:
+      - notification records are recipient-scoped and cannot be read or marked read by another user
+      - notification creation is deduplicated by a durable key shared with the outbox record
+      - public timeline responses exclude private moderation and project activity
+      - timeline notification failures do not roll back the already-recorded activity
+  implementedTask14:
+    status: implemented
+    operations:
+      - method: GET
+        path: /api/admin/analytics
+        roles: [admin]
+        purpose: Return reconciled submission, project, stage-funnel, domain, district, institution, collaboration, and cash metrics.
+      - method: GET
+        path: /api/admin/analytics/export.csv
+        roles: [admin]
+        purpose: Download the same filtered analytics as a CSV report.
+    filters: [domain, district, institutionId, from, to]
+    definitions:
+      - distinct submissions exclude reports linked as duplicates; duplicateLinked is reported separately
+      - active projects have closureStatus open, including an open deployed project
+      - engaged institutions are the distinct institution IDs in accepted assignments or accepted support offers
+      - stage funnel counts distinct projects with durable stage history, with current-stage lower-bound fallback for legacy records
+      - closure rate is closed projects divided by the filtered project cohort with a linked citizen submission
+      - cash is grouped by currency and separates pending pledges from accepted confirmed amounts; delivered remains zero until an explicit delivery state exists
+      - patents and startups are zero unless explicit verified outcome records are added
+    safeguards:
+      - analytics and export require administrator authorization
+      - filters are applied to the same source cohort for dashboard and CSV reconciliation
+      - CSV values are escaped and never combine incompatible currencies or impact units
+  implementedTask15:
+    status: implemented
+    capability: configurable-ai-classification
+    providers: [rules, mock, openai-compatible, gemini]
+    selectedProvider: gemini
+    selectedModel: gemini-3.5-flash-lite
+    analysisEndpoints:
+      citizenOwner: GET /api/submissions/{id}/analysis
+      adminDetail: GET /api/admin/submissions/{id}/analysis
+      adminRetry: POST /api/admin/submissions/{id}/analysis/retry
+      adminProviderStatus: GET /api/admin/ai/status
+    configuration: [AI_PROVIDER, AI_API_URL, AI_API_KEY, AI_MODEL, AI_TIMEOUT_MS, AI_MAX_INPUT_CHARS]
+    safeguards:
+      - provider calls run only on the server and receive redacted, length-capped text
+      - responses are strict-validated before persistence
+      - invalid or unavailable optional providers fall back to rules classification
+      - AI output remains advisory and cannot directly reject, route, resolve, or advance a record
+      - provider credentials are never sent to web/mobile clients
+
 # ──────────────────────────────────────────────
 # Reusable components
 # ──────────────────────────────────────────────
@@ -461,8 +877,114 @@ paths:
                       data:
                         $ref: "#/components/schemas/HealthData"
 
+  /api/notifications:
+    get:
+      operationId: listNotifications
+      summary: List the authenticated user's notification inbox
+      tags: [Notifications]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Recipient-scoped notifications
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/notifications/unread-count:
+    get:
+      operationId: getNotificationUnreadCount
+      summary: Count unread notifications for the authenticated user
+      tags: [Notifications]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Unread notification count
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/notifications/read-all:
+    post:
+      operationId: markAllNotificationsRead
+      summary: Mark all notifications as read
+      tags: [Notifications]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Number of notifications marked read
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/notifications/{notificationId}/read:
+    post:
+      operationId: markNotificationRead
+      summary: Mark one recipient-owned notification as read
+      tags: [Notifications]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: notificationId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Notification marked read
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Notification belongs to another user or is already read
+
+  /api/admin/analytics:
+    get:
+      operationId: getAdminAnalytics
+      summary: Return filtered government analytics
+      tags: [Administration]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: domain, in: query, schema: { type: string } }
+        - { name: district, in: query, schema: { type: string } }
+        - { name: institutionId, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+      responses:
+        "200":
+          description: Reconciled analytics report
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: Administrator role required }
+
+  /api/admin/analytics/export.csv:
+    get:
+      operationId: exportAdminAnalyticsCsv
+      summary: Download filtered government analytics as CSV
+      tags: [Administration]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: domain, in: query, schema: { type: string } }
+        - { name: district, in: query, schema: { type: string } }
+        - { name: institutionId, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+      responses:
+        "200":
+          description: CSV attachment with the same metrics as the analytics endpoint
+          content:
+            text/csv:
+              schema: { type: string }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: Administrator role required }
+
 tags:
   - name: Authentication
     description: Registration, onboarding, sessions, and password recovery.
   - name: Health
     description: System health and readiness endpoints
+  - name: Notifications
+    description: Recipient-scoped persistent notifications and read state
+  - name: Administration
+    description: Restricted moderation, workflow oversight, analytics, and exports
+
+x-civicx-implementedTask16:
+  status: implemented
+  automatedEvidence:
+    lifecycleTest: server/backend/tests/task-16-lifecycle.test.ts
+    migrationRehearsal: server/backend/src/modules/migrations/legacy-challenge-migration.service.ts
+  notes:
+    - The migration rehearsal is read-only and reports missing or ambiguous legacy references.
+    - Browser and Android device checks are manual and recorded in docs/task-16-regression-checklist.md.

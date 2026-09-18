@@ -2,6 +2,9 @@ import mongoose from "mongoose";
 import app from "./app";
 import config from "./config";
 import { logger } from "./middleware/logger";
+import { startClassificationWorker } from "./modules/classification/classification.worker";
+import { ClassificationJob } from "./modules/classification/classification-job.model";
+import { ClassificationResult } from "./modules/classification/classification-result.model";
 
 // ──────────────────────────────────────────────
 // Server startup (separated from app.ts)
@@ -11,6 +14,7 @@ async function start(): Promise<void> {
   // ── Connect to MongoDB ────────────────────
   try {
     await mongoose.connect(config.mongoUri);
+    await Promise.all([ClassificationJob.syncIndexes(), ClassificationResult.syncIndexes()]);
     logger.info({ uri: config.mongoUri.replace(/\/\/.*@/, "//<credentials>@") }, "MongoDB connected");
   } catch (err) {
     logger.warn({ err }, "MongoDB connection failed — running without database");
@@ -37,10 +41,12 @@ async function start(): Promise<void> {
       `CivicX API server started`
     );
   });
+  const stopClassificationWorker = startClassificationWorker();
 
   // ── Graceful shutdown ─────────────────────
   const shutdown = async (signal: string) => {
     logger.info({ signal }, "Shutdown signal received");
+    stopClassificationWorker();
     server.close(async () => {
       await mongoose.connection.close();
       logger.info("Server shut down gracefully");

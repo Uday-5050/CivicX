@@ -10,7 +10,9 @@
     "lint": "eslint src/ tests/",
     "test": "vitest run",
     "test:watch": "vitest",
-    "create:government": "tsx src/scripts/create-government.ts"
+    "create:government": "tsx src/scripts/create-government.ts",
+    "admin:create": "tsx scripts/create-admin.ts",
+    "migration:rehearse": "tsx scripts/migration-rehearsal.ts"
   },
   "keywords": [
     "civicx",

@@ -115,7 +115,7 @@
 .auth-form label { display: flex; flex-direction: column; gap: 7px; color: #334155; font-size: 13px; font-weight: 600; }
 .auth-form input:not([type='checkbox']) { width: 100%; padding: 13px 14px; border: 1px solid #d5dee8; border-radius: 4px; outline: none; color: #1e293b; background: #fff; font-size: 14px; transition: border-color .2s, box-shadow .2s; }
 .auth-form input:focus { border-color: #1a5bc4; box-shadow: 0 0 0 3px rgba(26, 91, 196, .12); }
-.role-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; background: #edf2f7; border-radius: 4px; }
+.role-switch { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; background: #edf2f7; border-radius: 4px; }
 .role-switch button { padding: 10px; border: 0; border-radius: 3px; background: transparent; color: #64748b; cursor: pointer; font-size: 13px; }
 .role-switch button.active { background: #fff; color: #0b3d91; box-shadow: 0 1px 4px rgba(15, 23, 42, .1); font-weight: 700; }
 .form-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -263,3 +263,11 @@
 
 /* The server owns persistent web sessions through its refresh cookie. */
 .form-row .check-label { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

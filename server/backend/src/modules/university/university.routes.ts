@@ -11,6 +11,10 @@ import { UniversityChallenge } from "./university.model";
 import { createChallengeSchema, decisionSchema } from "./university.schemas";
 import { Project } from "../projects/project.model";
 import { Submission } from "../submissions/submission.model";
+import { RoutingAssignment } from "../routing/routing-assignment.model";
+import { assignmentDecisionSchema } from "./university.schemas";
+import { decideRoutingAssignment, serializeAssignment } from "./assignment.service";
+import { recordProjectStage } from "../projects/project-stage-history.service";
 
 const router = Router();
 router.use(requireAuth);
@@ -25,6 +29,26 @@ function serialize(challenge: InstanceType<typeof UniversityChallenge>) {
   const { _id, institutionId: _institutionId, decidedBy: _decidedBy, ...data } = challenge.toObject();
   return { ...data, id: _id.toString(), projectId: data.project?.id };
 }
+
+router.get("/assignments", requireRole("university"), async (req, res, next) => {
+  try {
+    const institutionId = await institutionFor(req.auth!.userId);
+    const assignments = await RoutingAssignment.find({ institutionId }).sort({ createdAt: -1, _id: -1 });
+    const submissions = await Submission.find({ _id: { $in: assignments.map((assignment) => assignment.submissionId) } }).select("title description domain location status analysis createdAt").lean();
+    const byId = new Map(submissions.map((submission) => [submission._id.toString(), submission]));
+    sendSuccess(res, assignments.map((assignment) => ({ ...serializeAssignment(assignment), report: byId.get(assignment.submissionId.toString()) ? { id: assignment.submissionId.toString(), ...byId.get(assignment.submissionId.toString()) } : undefined })));
+  } catch (error) { next(error); }
+});
+
+router.post("/assignments/:id/decision", requireRole("university"), async (req, res, next) => {
+  try {
+    const institutionId = await institutionFor(req.auth!.userId);
+    const input = assignmentDecisionSchema.parse(req.body ?? {});
+    const result = await decideRoutingAssignment({ assignmentId: String(req.params.id), institutionId, userId: req.auth!.userId, ...input });
+    sendSuccess(res, { assignment: serializeAssignment(result.assignment), project: result.project ? { id: result.project.id, title: result.project.title, currentStage: result.project.currentStage, version: result.project.version } : undefined, reused: result.reused });
+  } catch (error) { next(error); }
+});
+
 // Administrators assign real challenges and eligible teams to an approved university.
 router.post("/challenges", requireRole("admin"), validate(createChallengeSchema), async (req, res, next) => {
   try {
@@ -68,6 +92,7 @@ router.post("/challenges/:id/decision", requireRole("university"), validate(deci
         { $setOnInsert: { id: projectId, challengeId: updated._id.toString(), sourceSubmissionId: updated.sourceSubmissionId, submissionId: updated.sourceSubmissionId, institutionId, title: updated.title, summary: updated.summary, domain: updated.domain, department: updated.department, team: { leadId: req.auth!.userId, mentorId: proposal.mentorId, studentIds: proposal.studentIds }, currentStage: "proposed", version: 1, evidence: {}, deliverables: [], ipDisclosures: [], testRecords: [] } },
         { upsert: true },
       );
+      await recordProjectStage(projectId, "proposed", "acceptance");
       if (updated.sourceSubmissionId) await Submission.updateOne({ _id: updated.sourceSubmissionId, status: { $in: ["submitted", "under_review"] } }, { $set: { status: "assigned" } });
     }
     sendSuccess(res, serialize(updated));

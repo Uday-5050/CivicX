@@ -643,7 +643,9 @@ class MyReportsScreen extends ConsumerWidget {
                 return Card(
                     child: ListTile(
                         title: Text(item.title),
-                        subtitle: Text('${item.domain} • ${item.status}'),
+                        subtitle: Text(
+                            '${item.domain} • ${item.status}\nAI: ${item.analysis.status}'),
+                        isThreeLine: true,
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () => _showDetails(context, item)));
               },
@@ -672,6 +674,21 @@ class MyReportsScreen extends ConsumerWidget {
             const SizedBox(height: 16),
             Text('Status: ${item.status}'),
             Text('Domain: ${item.domain}'),
+            const SizedBox(height: 12),
+            Text('AI analysis: ${item.analysis.status}',
+                style: Theme.of(context).textTheme.titleSmall),
+            if (item.analysis.summary?.isNotEmpty == true)
+              Text(item.analysis.summary!),
+            if (item.analysis.category?.isNotEmpty == true)
+              Text('Suggested category: ${item.analysis.category}'),
+            if (item.analysis.priority?.isNotEmpty == true)
+              Text('Suggested priority: ${item.analysis.priority}'),
+            if (item.analysis.status == 'fallback')
+              const Text(
+                  'Gemini was unavailable, so safe local rules were used.'),
+            if (item.analysis.status == 'failed')
+              const Text(
+                  'Analysis is unavailable. Your report is still saved and can be reviewed.'),
             if (item.location.isNotEmpty) Text('Location: ${item.location}'),
             Text('Follow-up notes: ${item.comments}'),
             if (item.attachments.isNotEmpty) ...[

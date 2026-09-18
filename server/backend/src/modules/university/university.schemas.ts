@@ -15,6 +15,15 @@ export const decisionSchema = z.object({
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["proposal"], message: "A proposal is required only for acceptance" });
   }
 });
+export const assignmentDecisionSchema = z.object({
+  decision: z.enum(["accepted", "declined", "info_requested"]),
+  expectedVersion: z.number().int().min(1),
+  reason: z.string().trim().min(1).max(2000).optional(),
+  question: z.string().trim().min(1).max(2000).optional(),
+}).strict().superRefine((value, ctx) => {
+  if (value.decision === "declined" && !value.reason) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["reason"], message: "A reason is required when declining an assignment" });
+  if (value.decision === "info_requested" && !value.question) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["question"], message: "A question is required when requesting clarification" });
+});
 export const createChallengeSchema = z.object({
   district: text.optional(),
   industryId: z.string().regex(/^[a-f\d]{24}$/i).optional(),

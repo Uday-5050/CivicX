@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useState } from 'react'
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { ROLES, type Role } from '../../constants/roles'
 import { request } from '../../api/client'
 
@@ -33,7 +33,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 function readSavedUser(): AuthUser | null {
   try {
     const saved = localStorage.getItem(USER_KEY)
-    return saved ? JSON.parse(saved) as AuthUser : null
+    if (!saved) return null
+    const parsed = JSON.parse(saved) as AuthUser
+    return Object.values(ROLES).includes(parsed.role) ? parsed : null
   } catch {
     return null
   }
@@ -43,6 +45,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<AuthUser | null>(readSavedUser)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const isMockMode = false
+
+  useEffect(() => {
+    const handleExpired = () => {
+      sessionStorage.removeItem('civicx_access_token')
+      localStorage.removeItem(USER_KEY)
+      setUser(null)
+    }
+    window.addEventListener('civicx:session-expired', handleExpired)
+    return () => window.removeEventListener('civicx:session-expired', handleExpired)
+  }, [])
 
   const saveSession = (nextUser: AuthUser) => {
     localStorage.setItem(USER_KEY, JSON.stringify(nextUser))
@@ -60,7 +72,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       const response = await request<AuthPayload>('/auth/web/login', { method: 'POST', data: { email, password } })
-      if (response.data.user.role !== role && !(role === ROLES.UNIVERSITY && response.data.user.role === ROLES.INDUSTRY)) return { ok: false, message: 'This account does not match the selected sign-in type.' }
+      if (response.data.user.role !== role) return { ok: false, message: 'This account does not match the selected sign-in type.' }
       saveApiSession(response.data)
       return { ok: true }
     } catch (error) { return { ok: false, message: error instanceof Error ? error.message : 'Unable to sign in.' } }

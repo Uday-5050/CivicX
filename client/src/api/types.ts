@@ -42,8 +42,9 @@ export interface HealthData {
   mongo?: 'connected' | 'disconnected';
 }
 
-export type AnalysisStatus = 'pending' | 'completed' | 'failed';
+export type AnalysisStatus = 'pending' | 'processing' | 'completed' | 'fallback' | 'failed';
 export type SubmissionStatus = 'draft' | 'submitted' | 'under_review' | 'assigned' | 'in_progress' | 'resolved';
+export type SubmissionDisposition = 'active' | 'duplicate' | 'rejected' | 'referred';
 
 export interface SubmissionAttachment {
   id: string;
@@ -59,6 +60,18 @@ export interface SubmissionAnalysis {
   priority?: 'low' | 'medium' | 'high';
   summary?: string;
   error?: string;
+  provider?: string;
+  revision?: number;
+}
+
+export interface ClassificationRevision {
+  resultId: string; jobId: string; provider: string; requestedProvider?: string; model?: string; promptVersion?: string; revision: number;
+  category: string; priority: 'low' | 'medium' | 'high'; summary: string; signals: string[]; durationMs?: number; fallbackReason?: string; createdAt: string;
+}
+export interface AdminClassificationAnalysis {
+  job?: { jobId: string; status: 'pending' | 'running' | 'completed' | 'failed'; requestedProvider: string; attempts: number; lastError?: string; createdAt: string; completedAt?: string };
+  current?: ClassificationRevision;
+  revisions: ClassificationRevision[];
 }
 
 export interface Submission {
@@ -71,6 +84,8 @@ export interface Submission {
   submitterType: Role;
   attachments: SubmissionAttachment[];
   status: SubmissionStatus;
+  disposition?: SubmissionDisposition;
+  duplicateOf?: string;
   analysis: SubmissionAnalysis;
   comments: number;
   upvotes: number;
@@ -164,10 +179,13 @@ export interface ProjectBoard {
   title: string;
   summary: string;
   version: number;
+  currentStage?: ProjectStage;
+  closureStatus?: 'open' | 'closed';
   milestones: ProjectMilestone[];
   deliverables: ProjectRecord[];
   ipDisclosures: ProjectRecord[];
   testRecords: ProjectRecord[];
+  outcome?: ProjectOutcome;
   updatedAt: string;
 }
 
@@ -175,11 +193,13 @@ export type NotificationType = 'project' | 'submission' | 'system';
 
 export interface CivicNotification {
   id: string;
-  userId: string;
   type: NotificationType;
+  eventType: string;
   title: string;
   body: string;
+  payload: Record<string, unknown>;
   read: boolean;
+  readAt?: string;
   createdAt: string;
 }
 
@@ -226,6 +246,344 @@ export interface AdminReportRow {
   district: string;
   status: string;
   count: number;
+}
+
+export type RoutingAssignmentStatus = 'pending' | 'accepted' | 'declined' | 'cancelled';
+export type AssignmentDecision = 'accepted' | 'declined' | 'info_requested';
+export type ProjectStage = 'proposed' | 'funded' | 'prototyping' | 'piloted' | 'deployed';
+export type ProjectMembershipRole = 'lead' | 'mentor' | 'student' | 'industry_partner';
+export type ProposalStatus = 'draft' | 'submitted' | 'approved' | 'returned';
+export type EvidenceStatus = 'pending' | 'approved' | 'rejected';
+export type OfferStatus = 'pending' | 'accepted' | 'declined' | 'withdrawn';
+
+export interface UniversityAssignmentReport {
+  id: string;
+  title: string;
+  description: string;
+  domain: string;
+  location: string;
+  status: SubmissionStatus;
+  disposition?: SubmissionDisposition;
+  duplicateOf?: string;
+  analysis?: SubmissionAnalysis;
+  createdAt: string;
+}
+
+export interface SubmissionTimelineEvent {
+  id: string;
+  type: string;
+  message: string;
+  createdAt: string;
+}
+
+export interface InformationRequest {
+  requestId: string;
+  submissionId: string;
+  question: string;
+  status: 'open' | 'answered' | 'cancelled';
+  requestedAt: string;
+  answer?: string;
+  answeredAt?: string;
+}
+
+export interface SubmissionDetail extends Submission {
+  timeline: SubmissionTimelineEvent[];
+  informationRequests: InformationRequest[];
+  outcome?: PublicProjectOutcome;
+}
+
+export interface PublicProjectOutcome {
+  baseline: string;
+  target?: string;
+  result: string;
+  unit: string;
+  measurementStart?: string;
+  measurementEnd?: string;
+  method?: string;
+  beneficiaries?: string;
+  validationNote?: string;
+  validatedAt?: string;
+  evidenceCount: number;
+}
+
+export interface UniversityAssignment {
+  id: string;
+  submissionId: string;
+  institutionId: string;
+  departmentId: string;
+  departmentName: string;
+  status: RoutingAssignmentStatus;
+  version: number;
+  isActive: boolean;
+  reason?: string;
+  clarification?: { question: string; requestedAt: string };
+  matchSnapshot: { score: number; components: Array<{ name: string; points: number; maximum: number; reasons: string[] }>; generatedAt: string };
+  assignedBy: string;
+  decidedBy?: string;
+  decisionReason?: string;
+  decidedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  report?: UniversityAssignmentReport;
+}
+
+export interface AssignmentDecisionInput {
+  decision: AssignmentDecision;
+  expectedVersion: number;
+  reason?: string;
+  question?: string;
+}
+
+export interface AssignmentDecisionResult {
+  assignment: UniversityAssignment;
+  project?: { id: string; title: string; currentStage: ProjectStage; version: number };
+  reused: boolean;
+}
+
+export interface AuthorizedProjectSummary {
+  id: string;
+  title: string;
+  summary: string;
+  domain: string;
+  department: string;
+  currentStage: ProjectStage;
+  version: number;
+  updatedAt: string;
+}
+
+export interface InstitutionProfile {
+  id: string;
+  name: string;
+  type: 'university' | 'industry';
+  accountStatus: AdminAccountStatus;
+  description?: string;
+  domains: string[];
+  expertise: string[];
+  facilities: string[];
+  serviceAreas: string[];
+  departments: Array<{ id: string; name: string; domains: string[]; leadUserId?: string; active: boolean }>;
+  maxActiveProjects: number;
+  acceptingWork: boolean;
+  profileStatus: 'draft' | 'verified';
+  profileVerifiedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type InstitutionMembershipRole = 'coordinator' | 'mentor' | 'student' | 'partner';
+export type InstitutionMembershipStatus = 'pending' | 'active' | 'suspended';
+export interface InstitutionRosterMember {
+  id: string;
+  userId: string;
+  name: string;
+  email: string;
+  accountStatus: AdminAccountStatus;
+  role: InstitutionMembershipRole;
+  department?: string;
+  status: InstitutionMembershipStatus;
+  verifiedAt?: string;
+  createdAt: string;
+}
+
+export interface InstitutionRosterMutationResult {
+  id: string;
+  userId: string;
+  role: InstitutionMembershipRole;
+  department?: string;
+  status: InstitutionMembershipStatus;
+  verifiedAt?: string;
+}
+
+export interface ProjectMembership {
+  id: string;
+  projectId: string;
+  userId: string;
+  name?: string;
+  email?: string;
+  role: ProjectMembershipRole;
+  status: 'active' | 'suspended';
+  department?: string;
+  addedBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProposalInput {
+  approach: string;
+  timeline: string;
+  beneficiaries: string;
+  rootCause: string;
+  workPlan: string;
+  risks: string;
+  resources: string;
+  budgetMinor?: number;
+  currency?: string;
+}
+
+export interface ProposalRevision extends ProposalInput {
+  id: string;
+  proposalId: string;
+  projectId: string;
+  revision: number;
+  status: ProposalStatus;
+  authorId: string;
+  createdAt: string;
+  updatedAt: string;
+  reviews: ProposalReview[];
+}
+
+export interface ProposalReview {
+  reviewId: string;
+  proposalId: string;
+  projectId: string;
+  status: 'approved' | 'returned';
+  note: string;
+  reviewedBy: string;
+  createdAt: string;
+}
+
+export interface IndustryOpportunity {
+  id: string;
+  projectId: string;
+  title: string;
+  summary: string;
+  needs: CollaborationType[];
+  status: 'published' | 'closed';
+  university: string;
+  projectTitle: string;
+  domain?: string;
+  department?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SupportOffer {
+  id: string;
+  opportunityId: string;
+  projectId: string;
+  organization: string;
+  supportType: CollaborationType;
+  responsibilities: string;
+  message: string;
+  amountMinor?: number;
+  currency?: string;
+  inKindDescription?: string;
+  status: OfferStatus;
+  version: number;
+  projectTitle: string;
+  opportunityTitle: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MilestoneEvidence {
+  evidenceId: string;
+  projectId: string;
+  targetStage: ProjectStage;
+  revision: number;
+  note: string;
+  links: string[];
+  submittedBy: string;
+  status: EvidenceStatus;
+  submittedAt: string;
+  updatedAt: string;
+}
+
+export interface MilestoneReview {
+  reviewId: string;
+  evidenceId: string;
+  projectId: string;
+  targetStage: ProjectStage;
+  status: 'approved' | 'rejected';
+  note: string;
+  reviewedBy: string;
+  reviewedAt: string;
+  consumedAt?: string;
+}
+
+export interface ProjectOutcome {
+  baseline: string;
+  target?: string;
+  result: string;
+  unit: string;
+  measurementStart?: string;
+  measurementEnd?: string;
+  method?: string;
+  beneficiaries?: string;
+  evidence: string[];
+  validationNote?: string;
+  validatedBy?: string;
+  validatedAt?: string;
+}
+
+export interface ProjectClosure {
+  closureId: string;
+  projectId: string;
+  submissionId: string;
+  action: 'closed' | 'reopened';
+  reason?: string;
+  outcome?: ProjectOutcome;
+  actorId: string;
+  createdAt: string;
+}
+
+export interface AnalyticsReport {
+  generatedAt: string;
+  filters: { domain?: string; district?: string; institutionId?: string; from?: string; to?: string };
+  submissions: { total: number; distinct: number; duplicateLinked: number; resolved: number; byStatus: Record<string, number>; byDisposition: Record<string, number> };
+  projects: { total: number; active: number; closed: number; closureRate: { numerator: number; denominator: number; percent: number } };
+  stageFunnel: Array<{ stage: ProjectStage; projects: number }>;
+  domains: Array<{ domain: string; submitted: number; inProgress: number; resolved: number; total: number }>;
+  districts: Array<{ district: string; total: number; activeProjects: number; resolved: number; engagedInstitutions: number }>;
+  engagedInstitutions: { count: number; ids: string[] };
+  universities: Array<{ id: string; name: string; challengesAssigned: number; projectsActive: number; proposalsSubmitted: number; solutionsDeployed: number }>;
+  industry: Array<{ id: string; name: string; acceptedOffers: number; confirmedCashByCurrency: Record<string, number>; prototypeOffers: number; deploymentOffers: number }>;
+  cashCommitments: Array<{ currency: string; pledgedMinor: number; confirmedMinor: number; deliveredMinor: number }>;
+  verifiedOutcomes: { patents: number; startups: number; source: 'explicit_records_only' };
+}
+
+export interface AdminSubmissionDetail {
+  submission: Submission & { _id?: string; disposition?: 'active' | 'duplicate' | 'rejected' | 'referred'; duplicateOf?: string };
+  moderation: Array<Record<string, unknown>>;
+  informationRequests: Array<Record<string, unknown>>;
+  timeline: Array<Record<string, unknown>>;
+  routing: UniversityAssignment[];
+}
+
+export type AdminReviewDecision = 'reviewed' | 'information_requested' | 'marked_duplicate' | 'rejected' | 'referred' | 'restored';
+export interface AdminReviewInput {
+  decision?: AdminReviewDecision;
+  note?: string;
+  category?: string;
+  priority?: 'low' | 'medium' | 'high';
+  duplicateOf?: string;
+  question?: string;
+}
+
+export interface AdminReviewResult {
+  id: string;
+  status: SubmissionStatus;
+  disposition: 'active' | 'duplicate' | 'rejected' | 'referred';
+  decision: AdminReviewDecision;
+  moderationId: string;
+  informationRequestId?: string;
+}
+
+export interface UniversityRecommendation {
+  institutionId: string;
+  institutionName: string;
+  departments: Array<{ id: string; name: string; domains: string[] }>;
+  score: number;
+  components: Array<{ name: string; points: number; maximum: number; reasons: string[] }>;
+  availableCapacity: number;
+  activeProjects: number;
+  reservedAssignments: number;
+}
+
+export interface UniversityRecommendationResult {
+  submissionId: string;
+  candidates: UniversityRecommendation[];
+  noMatch: boolean;
 }
 
 export class ApiError extends Error {

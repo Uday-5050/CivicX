@@ -3,7 +3,7 @@
 .submission-heading h2, .feed-heading h2 { margin: 16px 0 8px; color: #0b3d91; font-size: clamp(28px, 4vw, 48px); line-height: 1; letter-spacing: -.03em; }
 .submission-heading p:last-child { color: #64748b; font-size: 14px; }
 .submission-count { color: #64748b; font: 11px var(--font-mono); white-space: nowrap; }
-.submission-layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(280px, .6fr); gap: 16px; align-items: start; }
+.submission-layout { display: block; }
 .submission-form, .analysis-panel, .submission-card { border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; box-shadow: var(--shadow-sm); }
 .submission-form { display: flex; flex-direction: column; gap: 18px; padding: 30px; }
 .section-kicker { display: flex; gap: 12px; color: #1a5bc4; font: 12px var(--font-mono); }
@@ -38,7 +38,9 @@
 .analysis-header small { margin-top: 3px; color: #64748b; font-size: 10px; }
 .analysis-status { margin-left: auto; padding: 4px 7px; border-radius: 3px; font: 10px var(--font-mono); text-transform: uppercase; }
 .analysis-status-pending { color: #92400e; background: #fef3c7; }
+.analysis-status-processing { color: #075985; background: #e0f2fe; }
 .analysis-status-completed { color: #065f46; background: #d1fae5; }
+.analysis-status-fallback { color: #9a3412; background: #ffedd5; }
 .analysis-status-failed { color: #991b1b; background: #fee2e2; }
 .analysis-panel > p { min-height: 45px; margin: 22px 0; color: #64748b; font-size: 13px; line-height: 1.6; }
 .analysis-result { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }

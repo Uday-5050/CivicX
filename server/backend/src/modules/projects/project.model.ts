@@ -7,11 +7,11 @@ type Evidence = { id: string; note: string; links: string[]; submittedBy: string
 export interface ProjectDocument {
   id: string; challengeId: string; submissionId?: string; institutionId: string; title: string; summary: string; domain: string; department: string;
   team: { leadId: string; mentorId: string; studentIds: string[] };
-  currentStage: ProjectStage; version: number; evidence: Partial<Record<ProjectStage, Evidence>>;
+  currentStage: ProjectStage; version: number; closureStatus: "open" | "closed"; closedAt?: Date; reopenedAt?: Date; evidence: Partial<Record<ProjectStage, Evidence>>;
   deliverables: Array<{ id: string; title: string; detail: string; author: string; createdAt: Date }>;
   ipDisclosures: Array<{ id: string; title: string; detail: string; author: string; createdAt: Date }>;
   testRecords: Array<{ id: string; title: string; detail: string; author: string; createdAt: Date }>;
-  outcome?: { baseline: string; result: string; unit: string; evidence: string[]; validatedBy: string; validatedAt: Date };
+  outcome?: { baseline: string; target?: string; result: string; unit: string; measurementStart?: string; measurementEnd?: string; method?: string; beneficiaries?: string; evidence: string[]; validationNote?: string; validatedBy: string; validatedAt: Date };
   createdAt: Date; updatedAt: Date;
 }
 
@@ -24,10 +24,10 @@ const schema = new Schema<ProjectDocument>({
   id: { type: String, required: true, unique: true }, challengeId: { type: String, required: true, unique: true }, submissionId: { type: String, index: true }, institutionId: { type: String, required: true, index: true },
   title: { type: String, required: true }, summary: { type: String, required: true }, domain: { type: String, required: true }, department: { type: String, required: true },
   team: { type: new Schema({ leadId: String, mentorId: String, studentIds: [String] }, { _id: false }), required: true },
-  currentStage: { type: String, enum: projectStages, default: "proposed" }, version: { type: Number, default: 1 },
+  currentStage: { type: String, enum: projectStages, default: "proposed" }, version: { type: Number, default: 1 }, closureStatus: { type: String, enum: ["open", "closed"], default: "open", index: true }, closedAt: Date, reopenedAt: Date,
   evidence: { type: new Schema({ proposed: evidence, funded: evidence, prototyping: evidence, piloted: evidence, deployed: evidence }, { _id: false }), default: {} },
   deliverables: [record], ipDisclosures: [record], testRecords: [record],
-  outcome: { type: new Schema({ baseline: String, result: String, unit: String, evidence: [String], validatedBy: String, validatedAt: Date }, { _id: false }), default: undefined },
+  outcome: { type: new Schema({ baseline: String, target: String, result: String, unit: String, measurementStart: String, measurementEnd: String, method: String, beneficiaries: String, evidence: [String], validationNote: String, validatedBy: String, validatedAt: Date }, { _id: false }), default: undefined },
 }, { timestamps: true, versionKey: false });
 schema.index({ institutionId: 1, updatedAt: -1 });
 export const Project = model<ProjectDocument>("Project", schema);

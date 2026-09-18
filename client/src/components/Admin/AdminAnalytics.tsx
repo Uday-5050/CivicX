@@ -1,0 +1,23 @@
+import { useEffect, useState } from 'react'
+import { exportAdminAnalyticsCsv, getAdminAnalytics, type AnalyticsFilters } from '../../api/analytics.api'
+import type { AnalyticsReport } from '../../api/types'
+import './AdminAnalytics.css'
+
+const emptyFilters: AnalyticsFilters = {}
+const formatNumber = (value: number) => value.toLocaleString('en-IN')
+
+export default function AdminAnalytics() {
+  const [filters, setFilters] = useState<AnalyticsFilters>(emptyFilters)
+  const [report, setReport] = useState<AnalyticsReport | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const [notice, setNotice] = useState('')
+  const [error, setError] = useState('')
+
+  const load = async (nextFilters = filters) => { setBusy(true); setError(''); try { setReport(await getAdminAnalytics(nextFilters)); setNotice('') } catch (loadError) { setError(loadError instanceof Error ? loadError.message : 'Unable to load analytics.') } finally { setBusy(false) } }
+  useEffect(() => { void load() }, [])
+  const update = (field: keyof AnalyticsFilters, value: string) => setFilters((current) => ({ ...current, [field]: value || undefined }))
+  const exportCsv = async () => { setExporting(true); setError(''); try { const result = await exportAdminAnalyticsCsv(filters); const blob = new Blob([result.content], { type: 'text/csv;charset=utf-8' }); const url = URL.createObjectURL(blob); const anchor = document.createElement('a'); anchor.href = url; anchor.download = result.filename ?? 'civicx-analytics.csv'; anchor.click(); URL.revokeObjectURL(url); setNotice('Analytics CSV downloaded.') } catch (exportError) { setError(exportError instanceof Error ? exportError.message : 'Unable to export analytics.') } finally { setExporting(false) } }
+
+  return <section className="admin-analytics"><div className="admin-analytics-heading"><div><p className="section-kicker">10 <strong>Analytics and export</strong></p><h2>Measure the same cohort you can download.</h2><p>Filters apply to both the dashboard report and CSV export. Counts come from the admin analytics contract.</p></div><div><button type="button" onClick={() => void load()} disabled={busy}>↻ Refresh</button><button type="button" className="admin-analytics-export" onClick={() => void exportCsv()} disabled={exporting || !report}>{exporting ? 'Preparing…' : 'Download CSV'}</button></div></div>{notice && <p className="admin-analytics-notice" role="status">{notice}</p>}{error && <p className="admin-analytics-error" role="alert">{error}</p>}<div className="admin-analytics-filters"><label>Domain<input value={filters.domain ?? ''} onChange={(event) => update('domain', event.target.value)} placeholder="All domains" /></label><label>District<input value={filters.district ?? ''} onChange={(event) => update('district', event.target.value)} placeholder="All districts" /></label><label>From<input type="date" value={filters.from ?? ''} onChange={(event) => update('from', event.target.value)} /></label><label>To<input type="date" value={filters.to ?? ''} onChange={(event) => update('to', event.target.value)} /></label><button type="button" onClick={() => void load()} disabled={busy}>Apply filters</button></div>{report ? <><div className="admin-analytics-metrics"><article><small>Reports</small><strong>{formatNumber(report.submissions.total)}</strong><span>{formatNumber(report.submissions.resolved)} resolved</span></article><article><small>Projects</small><strong>{formatNumber(report.projects.total)}</strong><span>{formatNumber(report.projects.active)} active</span></article><article><small>Closed</small><strong>{formatNumber(report.projects.closed)}</strong><span>{report.projects.closureRate.percent}% closure rate</span></article><article><small>Institutions</small><strong>{formatNumber(report.engagedInstitutions.count)}</strong><span>Engaged in accepted work</span></article></div><div className="admin-analytics-body"><div><h3>Stage funnel</h3>{report.stageFunnel.map((item) => <div className="analytics-stage" key={item.stage}><span>{item.stage}</span><div><i style={{ width: `${report.projects.total ? Math.max(4, item.projects / report.projects.total * 100) : 0}%` }} /></div><b>{item.projects}</b></div>)}</div><div><h3>Domain totals</h3>{report.domains.length ? report.domains.map((item) => <div className="analytics-domain" key={item.domain}><span>{item.domain}</span><b>{item.total}</b><small>{item.resolved} resolved · {item.inProgress} in progress</small></div>) : <p className="admin-analytics-empty">No domain data for these filters.</p>}</div></div></> : <p className="admin-analytics-empty">Loading analytics…</p>}</section>
+}

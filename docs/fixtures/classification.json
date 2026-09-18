@@ -1,0 +1,57 @@
+[
+  {
+    "input": {
+      "title": "Broken road light",
+      "description": "An unsafe crossing needs an urgent repair.",
+      "domain": "Public safety"
+    },
+    "expected": {
+      "category": "Infrastructure",
+      "priority": "high"
+    }
+  },
+  {
+    "input": {
+      "title": "Overflowing waste bins",
+      "description": "Waste collection is delayed near the market.",
+      "domain": "Public services"
+    },
+    "expected": {
+      "category": "Public services",
+      "priority": "medium"
+    }
+  },
+  {
+    "input": {
+      "title": "Minor park concern",
+      "description": "A small community improvement would help residents.",
+      "domain": "Community"
+    },
+    "expected": {
+      "category": "Community development",
+      "priority": "low"
+    }
+  },
+  {
+    "input": {
+      "title": "स्कूल के पास सड़क की बत्ती बंद है",
+      "description": "अंधेरा होने के कारण यह जगह असुरक्षित है और तुरंत मरम्मत चाहिए।",
+      "domain": "Public safety"
+    },
+    "expected": {
+      "category": "Infrastructure",
+      "priority": "high"
+    }
+  },
+  {
+    "input": {
+      "title": "बाजार में कचरा जमा है",
+      "description": "कचरा कई दिनों से नहीं उठाया गया है।",
+      "domain": "Environment"
+    },
+    "expected": {
+      "category": "Public services",
+      "priority": "medium"
+    }
+  }
+]

@@ -21,4 +21,5 @@ export const createSubmissionSchema = z.object({
 
 export const classifySubmissionSchema = createSubmissionSchema.pick({ title: true, description: true, domain: true });
 export const commentSchema = z.object({ text: text.max(1000) }).strict();
+export const informationReplySchema = z.object({ answer: text }).strict();
 export type CreateSubmissionInput = z.infer<typeof createSubmissionSchema>;

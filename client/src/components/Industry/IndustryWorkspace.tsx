@@ -1,127 +1,47 @@
-import { useEffect, useState } from 'react'
-import { createCollaborationRequest, listCollaborationRequests, listIndustryProjects } from '../../api/industry.api'
-import type { CollaborationRequest, CollaborationType, IndustryProject } from '../../api/types'
+import { useEffect, useMemo, useState } from 'react'
+import { createIndustrySupportOffer, listIndustryOffers, listIndustryOpportunities } from '../../api/industry.api'
+import type { CollaborationType, IndustryOpportunity, SupportOffer } from '../../api/types'
 import './IndustryWorkspace.css'
 
-const collaborationTypes: CollaborationType[] = ['mentorship', 'funding', 'prototyping', 'deployment', 'technology_transfer']
-const domains = ['All', 'Sustainability', 'Health', 'Education']
-const labels: Record<CollaborationType, string> = {
-  mentorship: 'Mentorship',
-  funding: 'Funding',
-  prototyping: 'Prototyping',
-  deployment: 'Deployment',
-  technology_transfer: 'Technology transfer',
-}
+const labels: Record<CollaborationType, string> = { mentorship: 'Mentorship', funding: 'Funding', prototyping: 'Prototyping', deployment: 'Deployment', technology_transfer: 'Technology transfer' }
+const formatDate = (value: string) => { const date = new Date(value); return Number.isNaN(date.getTime()) ? 'Date unavailable' : new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).format(date) }
 
 export default function IndustryWorkspace() {
-  const [projects, setProjects] = useState<IndustryProject[]>([])
-  const [requests, setRequests] = useState<CollaborationRequest[]>([])
-  const [selected, setSelected] = useState<IndustryProject | null>(null)
+  const [opportunities, setOpportunities] = useState<IndustryOpportunity[]>([])
+  const [offers, setOffers] = useState<SupportOffer[]>([])
+  const [selectedId, setSelectedId] = useState('')
   const [domain, setDomain] = useState('All')
-  const [organization, setOrganization] = useState('')
-  const [type, setType] = useState<CollaborationType>('mentorship')
+  const [supportType, setSupportType] = useState<CollaborationType>('mentorship')
+  const [responsibilities, setResponsibilities] = useState('')
   const [message, setMessage] = useState('')
+  const [amountMinor, setAmountMinor] = useState('')
+  const [currency, setCurrency] = useState('INR')
+  const [inKindDescription, setInKindDescription] = useState('')
   const [formOpen, setFormOpen] = useState(false)
   const [notice, setNotice] = useState('')
+  const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   const load = async () => {
-    setBusy(true)
-    try {
-      const [nextProjects, nextRequests] = await Promise.all([listIndustryProjects(), listCollaborationRequests()])
-      setProjects(nextProjects)
-      setRequests(nextRequests)
-      setSelected((current) => current ? nextProjects.find((project) => project.id === current.id) ?? nextProjects[0] ?? null : nextProjects[0] ?? null)
-      setNotice('')
-    } catch {
-      setProjects([])
-      setRequests([])
-      setSelected(null)
-      setNotice('Industry project discovery is not available yet. Please try again later.')
-    } finally {
-      setBusy(false)
-    }
+    setLoading(true); setError('')
+    try { const [nextOpportunities, nextOffers] = await Promise.all([listIndustryOpportunities(), listIndustryOffers()]); setOpportunities(nextOpportunities); setOffers(nextOffers); setSelectedId((current) => current && nextOpportunities.some((item) => item.id === current) ? current : nextOpportunities[0]?.id ?? ''); setNotice('') } catch (loadError) { setError(loadError instanceof Error ? loadError.message : 'Unable to load industry opportunities.') } finally { setLoading(false) }
   }
-
   useEffect(() => { void load() }, [])
 
-  const filtered = projects.filter((project) => domain === 'All' || project.domain === domain)
-  const projectRequests = requests.filter((item) => item.projectId === selected?.id)
+  const domains = useMemo(() => ['All', ...new Set(opportunities.map((item) => item.domain).filter((value): value is string => Boolean(value)))], [opportunities])
+  const filtered = useMemo(() => opportunities.filter((item) => domain === 'All' || item.domain === domain), [opportunities, domain])
+  const selected = opportunities.find((item) => item.id === selectedId) ?? null
+  const selectedOffer = offers.find((offer) => offer.opportunityId === selected?.id)
 
-  const submitRequest = async () => {
-    if (!selected || !organization.trim() || !message.trim()) {
-      setNotice('Add your organization name and a short collaboration proposal before sending.')
-      return
-    }
-    if (projectRequests.some((item) => item.status === 'pending' || item.status === 'accepted')) {
-      setNotice('Your organization already has an active request or project access.')
-      return
-    }
-    setBusy(true)
-    try {
-      const created = await createCollaborationRequest({
-        projectId: selected.id,
-        projectTitle: selected.title,
-        organization: organization.trim(),
-        collaborationType: type,
-        message: message.trim(),
-      })
-      setRequests((current) => [created, ...current])
-      setMessage('')
-      setFormOpen(false)
-      setNotice('Collaboration request sent to the university.')
-    } catch {
-      setNotice('Unable to send the request. Please retry.')
-    } finally {
-      setBusy(false)
-    }
+  const chooseOpportunity = (item: IndustryOpportunity) => { setSelectedId(item.id); setSupportType(item.needs[0] ?? 'mentorship'); setFormOpen(false); setNotice(''); setError('') }
+  const submitOffer = async () => {
+    if (!selected || !responsibilities.trim() || !message.trim()) { setError('Add responsibilities and a message before sending an offer.'); return }
+    if (amountMinor.trim() && (!currency.trim() || !/^\d{3}$/.test(currency.trim()))) { setError('Enter a three-letter currency code for a cash amount.'); return }
+    if (!amountMinor.trim() && !inKindDescription.trim()) { setError('Describe the in-kind support when no cash amount is supplied.'); return }
+    setBusy(true); setError(''); setNotice('')
+    try { const created = await createIndustrySupportOffer(selected.id, { supportType, responsibilities: responsibilities.trim(), message: message.trim(), ...(amountMinor.trim() ? { amountMinor: Number(amountMinor) } : {}), ...(currency.trim() ? { currency: currency.trim().toUpperCase() } : {}), ...(inKindDescription.trim() ? { inKindDescription: inKindDescription.trim() } : {}) }); setOffers((current) => [created, ...current.filter((item) => item.id !== created.id)]); setFormOpen(false); setResponsibilities(''); setMessage(''); setAmountMinor(''); setInKindDescription(''); setNotice('Support offer sent to the university.') } catch (offerError) { setError(offerError instanceof Error ? offerError.message : 'Unable to send the support offer. Your form is still available to retry.') } finally { setBusy(false) }
   }
 
-  return <section className="industry-workspace">
-    <div className="industry-heading">
-      <div>
-        <p className="eyebrow"><span /> Industry workspace</p>
-        <h1>Find a project to move forward.</h1>
-        <p>Match your company&apos;s expertise with university projects and make a focused collaboration request.</p>
-      </div>
-      <span className="industry-count">{filtered.length} open projects</span>
-    </div>
-
-    <div className="industry-filters">
-      <label>Domain<select value={domain} onChange={(event) => setDomain(event.target.value)}>{domains.map((item) => <option key={item}>{item}</option>)}</select></label>
-      <button type="button" onClick={() => void load()} disabled={busy}>↻ Refresh</button>
-    </div>
-
-    {notice && !selected && <p className="industry-notice" role="alert">{notice}</p>}
-    {!notice && !projects.length && <p className="empty-requests">No projects are available for collaboration yet.</p>}
-
-    {selected && <div className="industry-layout">
-      <div className="project-list">
-        {filtered.map((project) => <button type="button" className={selected.id === project.id ? 'project-row selected' : 'project-row'} key={project.id} onClick={() => { setSelected(project); setFormOpen(false); setNotice('') }}>
-          <span className="project-status-dot" /><span><strong>{project.title}</strong><small>{project.university} · {project.domain}</small></span><span className="project-arrow">→</span>
-        </button>)}
-      </div>
-      <article className="project-detail">
-        <div className="project-top"><span className="project-domain">{selected.domain}</span><span className="project-stage">{selected.status.replace('_', ' ')}</span></div>
-        <h2>{selected.title}</h2>
-        <p className="project-summary">{selected.summary}</p>
-        <div className="project-meta"><span><small>University</small><strong>{selected.university}</strong></span><span><small>Department</small><strong>{selected.department}</strong></span><span><small>Milestone</small><strong>{selected.milestone}</strong></span></div>
-        <div className="project-section"><h3>Collaboration opportunities</h3><div className="need-list">{selected.needs.map((need) => <span key={need}>{labels[need]}</span>)}</div></div>
-        <div className="project-section"><h3>Project team</h3><div className="member-list">{selected.members.map((member) => <span key={member.id}><b>{member.name.slice(0, 1)}</b>{member.name}<small>{member.role}</small></span>)}</div></div>
-        {selected.accessGrantedTo.length > 0 && <p className="access-note">Access granted to: {selected.accessGrantedTo.join(', ')}</p>}
-        {notice && <p className="industry-notice" role="status">{notice}</p>}
-        {projectRequests.map((item) => <div className="request-card" key={item.id}><div><strong>Your {labels[item.collaborationType]} request</strong><span className={`request-status request-${item.status}`}>{item.status}</span></div><p>{item.message}</p></div>)}
-        {formOpen ? <div className="request-form">
-          <div className="request-form-heading"><h3>Request collaboration</h3><button type="button" onClick={() => setFormOpen(false)} aria-label="Close request form">×</button></div>
-          <label>Company or partner name<input value={organization} onChange={(event) => setOrganization(event.target.value)} /></label>
-          <label>Support type<select value={type} onChange={(event) => setType(event.target.value as CollaborationType)}>{collaborationTypes.map((item) => <option key={item} value={item}>{labels[item]}</option>)}</select></label>
-          <label>Proposal message<textarea value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Explain the support, resources, or expertise you can provide." rows={4} /></label>
-          <button className="request-submit" type="button" disabled={busy} onClick={() => void submitRequest()}>{busy ? 'Sending request...' : 'Send request'} <span>→</span></button>
-        </div> : !projectRequests.some((item) => item.status === 'pending' || item.status === 'accepted') && <button type="button" className="request-open" onClick={() => { setFormOpen(true); setNotice('') }}>Request access or collaboration →</button>}
-      </article>
-    </div>}
-
-    <div className="sent-heading"><div><p className="eyebrow"><span /> Sent-request tracker</p><h2>Requests in motion</h2></div><span>{requests.length} total</span></div>
-    <div className="sent-list">{requests.length ? requests.map((item) => <article key={item.id}><div><strong>{item.projectTitle}</strong><small>{labels[item.collaborationType]} · {item.organization}</small></div><span className={`request-status request-${item.status}`}>{item.status}</span></article>) : <p className="empty-requests">No requests sent yet.</p>}</div>
-  </section>
+  return <section className="industry-workspace"><div className="industry-heading"><div><p className="eyebrow"><span /> Industry workspace</p><h1>Support a solution with purpose.</h1><p>Browse published university opportunities and make a clear support offer with the resources your company can commit.</p></div><span className="industry-count"><strong>{filtered.length}</strong> published opportunities</span></div><div className="industry-filters"><label>Domain<select value={domain} onChange={(event) => setDomain(event.target.value)}>{domains.map((item) => <option key={item}>{item}</option>)}</select></label><button type="button" onClick={() => void load()} disabled={busy || loading}>↻ Refresh</button></div>{notice && <p className="industry-notice" role="status">{notice}</p>}{error && <p className="industry-error" role="alert">{error}</p>}{loading ? <p className="empty-requests">Loading published opportunities…</p> : !opportunities.length ? <p className="empty-requests">No approved university opportunities are published yet.</p> : <div className="industry-layout"><div className="project-list">{filtered.length ? filtered.map((item) => <button type="button" className={selected?.id === item.id ? 'project-row selected' : 'project-row'} key={item.id} onClick={() => chooseOpportunity(item)}><span className="project-status-dot" /><span><strong>{item.title}</strong><small>{item.university} · {item.domain ?? 'Domain pending'}</small></span><span className="project-arrow">→</span></button>) : <p className="empty-requests">No opportunities match this domain.</p>}</div>{selected && <article className="project-detail"><div className="project-top"><span className="project-domain">{selected.domain ?? 'Civic solution'}</span><span className="project-stage">{selected.status}</span></div><h2>{selected.title}</h2><p className="project-summary">{selected.summary}</p><div className="project-meta"><span><small>University</small><strong>{selected.university}</strong></span><span><small>Department</small><strong>{selected.department ?? 'Not specified'}</strong></span><span><small>Published</small><strong>{formatDate(selected.createdAt)}</strong></span></div><div className="project-section"><h3>Requested support</h3><div className="need-list">{selected.needs.map((need) => <span key={need}>{labels[need]}</span>)}</div></div>{selectedOffer ? <div className="offer-card"><div><small>Your offer</small><strong>{labels[selectedOffer.supportType]} · {selectedOffer.status}</strong></div><p>{selectedOffer.message}</p><small>{selectedOffer.amountMinor !== undefined ? `${selectedOffer.currency ?? ''} ${(selectedOffer.amountMinor / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : selectedOffer.inKindDescription ?? 'In-kind support'}</small>{selectedOffer.status === 'accepted' && <button type="button" onClick={() => { localStorage.setItem('civicx_project_id', selectedOffer.projectId); window.location.hash = `#/projects/${encodeURIComponent(selectedOffer.projectId)}` }}>Open authorized project →</button>}</div> : formOpen ? <div className="request-form"><div className="request-form-heading"><h3>Make a support offer</h3><button type="button" onClick={() => setFormOpen(false)} aria-label="Close offer form">×</button></div><label>Support type<select value={supportType} onChange={(event) => setSupportType(event.target.value as CollaborationType)}>{selected.needs.map((need) => <option key={need} value={need}>{labels[need]}</option>)}</select></label><label>Responsibilities<textarea value={responsibilities} onChange={(event) => setResponsibilities(event.target.value)} minLength={20} placeholder="What will your team take responsibility for?" rows={3} /></label><label>Message<textarea value={message} onChange={(event) => setMessage(event.target.value)} minLength={10} placeholder="Explain the support, resources, or expertise you can provide." rows={3} /></label><div className="offer-money-grid"><label>Cash amount (minor units)<input type="number" min="0" value={amountMinor} onChange={(event) => setAmountMinor(event.target.value)} placeholder="Optional" /></label><label>Currency<input value={currency} maxLength={3} onChange={(event) => setCurrency(event.target.value)} placeholder="INR" /></label></div><label>In-kind support<textarea value={inKindDescription} onChange={(event) => setInKindDescription(event.target.value)} placeholder="Required when no cash amount is supplied." rows={2} /></label><button className="request-submit" type="button" disabled={busy} onClick={() => void submitOffer()}>{busy ? 'Sending offer…' : 'Send support offer'} <span>→</span></button></div> : <button type="button" className="request-open" onClick={() => { setFormOpen(true); setError(''); setNotice('') }}>Offer support →</button>}</article>}</div>}{<div className="sent-heading"><div><p className="eyebrow"><span /> Offer tracker</p><h2>Your support offers</h2></div><span>{offers.length} total</span></div>}<div className="sent-list">{offers.length ? offers.map((offer) => <article key={offer.id}><div><strong>{offer.opportunityTitle}</strong><small>{labels[offer.supportType]} · {offer.organization}</small></div><span className={`request-status request-${offer.status}`}>{offer.status}</span></article>) : <p className="empty-requests">No support offers sent yet.</p>}</div></section>
 }

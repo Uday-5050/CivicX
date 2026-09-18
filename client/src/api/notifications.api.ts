@@ -5,6 +5,10 @@ export async function listNotifications(): Promise<CivicNotification[]> {
   return (await request<CivicNotification[]>('/notifications')).data
 }
 
+export async function getUnreadNotificationCount(): Promise<number> {
+  return (await request<{ count: number }>('/notifications/unread-count')).data.count
+}
+
 export async function markNotificationRead(notificationId: string): Promise<CivicNotification> {
   return (await request<CivicNotification>(`/notifications/${encodeURIComponent(notificationId)}/read`, { method: 'POST' })).data
 }
