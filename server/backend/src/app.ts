@@ -1,4 +1,6 @@
 import express from "express";
+import { existsSync } from "node:fs";
+import path from "node:path";
 import helmet from "helmet";
 import { requestId } from "./middleware/requestId";
 import { httpLogger } from "./middleware/logger";
@@ -46,6 +48,18 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/institutions", institutionRoutes);
 app.use("/api/admin", institutionAdminRouter);
 app.use("/api", industryRoutes);
+
+// The production Render service hosts both the React site and the API. The
+// mobile app continues to use /api while browsers receive the compiled client.
+if (process.env.NODE_ENV === "production") {
+  const clientDist = path.resolve(__dirname, "../../../client/dist");
+  const clientIndex = path.join(clientDist, "index.html");
+  if (existsSync(clientIndex)) {
+    app.use(express.static(clientDist, { index: false, maxAge: "1h" }));
+    app.get("/", (_req, res) => res.sendFile(clientIndex));
+    app.get(/^\/(?!api(?:\/|$)).*/, (_req, res) => res.sendFile(clientIndex));
+  }
+}
 
 // ── 404 handler ───────────────────────────────
 app.use((req, res) => {
