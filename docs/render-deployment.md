@@ -13,7 +13,7 @@ Update the existing service to use the repository root rather than `server/backe
 
 ```text
 Branch: main
-Build Command: npm --prefix client ci && npm --prefix client run build && npm --prefix server/backend ci && npm --prefix server/backend run build
+Build Command: npm --prefix client ci --include=dev && npm --prefix client run build && npm --prefix server/backend ci --include=dev && npm --prefix server/backend run build
 Start Command: npm --prefix server/backend start
 Health Check Path: /api/health
 ```

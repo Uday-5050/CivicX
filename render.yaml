@@ -5,7 +5,7 @@ services:
     plan: free
     branch: main
     autoDeployTrigger: commit
-    buildCommand: npm --prefix client ci && npm --prefix client run build && npm --prefix server/backend ci && npm --prefix server/backend run build
+    buildCommand: npm --prefix client ci --include=dev && npm --prefix client run build && npm --prefix server/backend ci --include=dev && npm --prefix server/backend run build
     startCommand: npm --prefix server/backend start
     healthCheckPath: /api/health
     maxShutdownDelaySeconds: 30
