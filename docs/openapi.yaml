@@ -478,6 +478,31 @@ components:
         - governance
         - other
 
+    VoiceReportDraft:
+      type: object
+      required: [transcript, languageCode, languageName, title, description, domain]
+      properties:
+        transcript:
+          type: string
+          description: Smart transcript returned for citizen review. It is not persisted with the final submission.
+        languageCode:
+          type: string
+          description: Detected primary language as a BCP-47 code.
+          example: hi-IN
+        languageName:
+          type: string
+          example: Hindi
+        title:
+          type: string
+          minLength: 3
+          maxLength: 120
+        description:
+          type: string
+          minLength: 20
+          maxLength: 2000
+        domain:
+          $ref: "#/components/schemas/IssueCategory"
+
     # ── Standard envelopes ─────────────────────
     SuccessResponse:
       type: object
@@ -705,6 +730,47 @@ components:
 # Paths
 # ──────────────────────────────────────────────
 paths:
+  /api/submissions/voice-draft:
+    post:
+      operationId: createVoiceReportDraft
+      summary: Create an editable citizen report draft from a voice recording
+      description: |
+        Accepts one short voice recording, transcribes it with automatic language
+        detection, and returns a schema-validated title, description, and domain.
+        The operation does not create a submission. The citizen must review and
+        submit the returned draft through POST /api/submissions. Raw audio is not
+        stored in CivicX or attached to the resulting report.
+      tags: [Submissions]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [audio]
+              properties:
+                audio:
+                  type: string
+                  format: binary
+                  description: WebM, OGG, MP3, M4A, WAV, or AAC; maximum 15 MB.
+      responses:
+        "200":
+          description: Editable report draft generated from the recording
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/VoiceReportDraft" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: Citizen role required }
+        "502": { description: Transcription or report-generation provider failed }
+        "503": { description: Voice AI is not configured }
+
   /api/auth/register:
     post:
       operationId: registerCitizen

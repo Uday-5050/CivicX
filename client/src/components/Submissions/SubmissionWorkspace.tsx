@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
-import { addSubmissionComment, createSubmission, getSubmissionAnalysis, listSubmissions } from '../../api/submissions.api'
+import { addSubmissionComment, createSubmission, createVoiceReportDraft, getSubmissionAnalysis, listSubmissions } from '../../api/submissions.api'
 import { ApiError, type Submission, type SubmissionAttachment } from '../../api/types'
 import type { Role } from '../../constants/roles'
 import LocationPicker from '../LocationPicker/LocationPicker'
@@ -13,6 +13,7 @@ type SavedDraft = { form: FormState; locationData: LocationData | null; attachme
 const initialForm: FormState = { title: '', description: '', location: '' }
 const maxFiles = 5
 const maxFileSize = 100 * 1024 * 1024
+const maxVoiceSeconds = 120
 const acceptedFileTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm', 'video/quicktime', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'])
 const draftKey = 'civicx:submission-draft:v1'
 
@@ -42,9 +43,27 @@ export default function SubmissionWorkspace({ role }: { role: Role }) {
   const [commentError, setCommentError] = useState('')
   const [locationData, setLocationData] = useState<LocationData | null>(null)
   const [idempotencyKey, setIdempotencyKey] = useState(createIdempotencyKey)
+  const [voiceState, setVoiceState] = useState<'idle' | 'requesting' | 'recording' | 'ready' | 'processing'>('idle')
+  const [voiceBlob, setVoiceBlob] = useState<Blob | null>(null)
+  const [voiceUrl, setVoiceUrl] = useState('')
+  const [voiceSeconds, setVoiceSeconds] = useState(0)
+  const [voiceLanguage, setVoiceLanguage] = useState('')
+  const [voiceCategory, setVoiceCategory] = useState('')
+  const [voiceTranscript, setVoiceTranscript] = useState('')
+  const voiceUrlRef = useRef('')
+  const recorderRef = useRef<MediaRecorder | null>(null)
+  const voiceStreamRef = useRef<MediaStream | null>(null)
+  const voiceChunksRef = useRef<Blob[]>([])
+  const voiceTimerRef = useRef<number | null>(null)
   const mounted = useRef(true)
 
-  useEffect(() => () => { mounted.current = false }, [])
+  useEffect(() => () => {
+    mounted.current = false
+    if (voiceTimerRef.current !== null) window.clearInterval(voiceTimerRef.current)
+    if (recorderRef.current?.state === 'recording') recorderRef.current.stop()
+    voiceStreamRef.current?.getTracks().forEach((track) => track.stop())
+    if (voiceUrlRef.current) URL.revokeObjectURL(voiceUrlRef.current)
+  }, [])
 
   const pollSavedAnalysis = async (submissionId: string) => {
     for (let attempt = 0; attempt < 12 && mounted.current; attempt += 1) {
@@ -90,6 +109,80 @@ export default function SubmissionWorkspace({ role }: { role: Role }) {
   const update = (key: keyof FormState, value: string) => { setForm((current) => ({ ...current, [key]: value })); setReviewing(false); setError('') }
   const setLocation = (value: LocationData | null) => { setLocationData(value); setReviewing(false); setError('') }
 
+  const stopVoiceTracks = () => {
+    if (voiceTimerRef.current !== null) { window.clearInterval(voiceTimerRef.current); voiceTimerRef.current = null }
+    voiceStreamRef.current?.getTracks().forEach((track) => track.stop())
+    voiceStreamRef.current = null
+  }
+
+  const stopVoiceRecording = () => {
+    if (recorderRef.current?.state === 'recording') recorderRef.current.stop()
+    stopVoiceTracks()
+  }
+
+  const startVoiceRecording = async () => {
+    setError(''); setSuccess(''); setVoiceLanguage(''); setVoiceCategory(''); setVoiceTranscript('')
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      setError('Voice recording is not supported in this browser. You can still type your report or use a recent Chrome, Edge, or Firefox browser.')
+      return
+    }
+    setVoiceState('requesting')
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: false })
+      const preferredType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus'].find((type) => MediaRecorder.isTypeSupported(type))
+      const recorder = preferredType ? new MediaRecorder(stream, { mimeType: preferredType }) : new MediaRecorder(stream)
+      if (voiceUrlRef.current) URL.revokeObjectURL(voiceUrlRef.current)
+      voiceStreamRef.current = stream; recorderRef.current = recorder; voiceChunksRef.current = []
+      setVoiceBlob(null); setVoiceUrl(''); setVoiceSeconds(0)
+      recorder.ondataavailable = (event) => { if (event.data.size) voiceChunksRef.current.push(event.data) }
+      recorder.onerror = () => { stopVoiceTracks(); setVoiceState('idle'); setError('Recording failed. Please check the microphone and try again.') }
+      recorder.onstop = () => {
+        const blob = new Blob(voiceChunksRef.current, { type: recorder.mimeType || 'audio/webm' })
+        stopVoiceTracks()
+        if (!blob.size) { setVoiceState('idle'); setError('No audio was captured. Please record again.'); return }
+        const nextUrl = URL.createObjectURL(blob)
+        voiceUrlRef.current = nextUrl
+        setVoiceBlob(blob); setVoiceUrl(nextUrl); setVoiceState('ready')
+      }
+      recorder.start(1000); setVoiceState('recording')
+      voiceTimerRef.current = window.setInterval(() => setVoiceSeconds((current) => {
+        const next = current + 1
+        if (next >= maxVoiceSeconds) stopVoiceRecording()
+        return Math.min(next, maxVoiceSeconds)
+      }), 1000)
+    } catch (caught) {
+      stopVoiceTracks(); setVoiceState('idle')
+      const denied = caught instanceof DOMException && (caught.name === 'NotAllowedError' || caught.name === 'SecurityError')
+      setError(denied ? 'Microphone access was denied. Allow microphone access in your browser and try again.' : 'The microphone is unavailable. Check that another app is not using it and try again.')
+    }
+  }
+
+  const clearVoiceRecording = () => {
+    if (recorderRef.current?.state === 'recording') {
+      recorderRef.current.ondataavailable = null
+      recorderRef.current.onstop = null
+      recorderRef.current.stop()
+    }
+    stopVoiceTracks()
+    recorderRef.current = null
+    voiceChunksRef.current = []
+    if (voiceUrlRef.current) URL.revokeObjectURL(voiceUrlRef.current)
+    voiceUrlRef.current = ''
+    setVoiceBlob(null); setVoiceUrl(''); setVoiceSeconds(0); setVoiceLanguage(''); setVoiceCategory(''); setVoiceTranscript(''); setVoiceState('idle')
+  }
+
+  const generateFromVoice = async () => {
+    if (!voiceBlob) return
+    setError(''); setVoiceState('processing')
+    try {
+      const draft = await createVoiceReportDraft(voiceBlob)
+      setForm({ title: draft.title, description: draft.description, location: '' })
+      setVoiceLanguage(`${draft.languageName} · ${draft.languageCode}`); setVoiceCategory(draft.domain); setVoiceTranscript(draft.transcript); setReviewing(false); setVoiceState('ready')
+    } catch (caught) {
+      setVoiceState('ready'); setError(caught instanceof Error ? caught.message : 'We could not process this recording. Please try again.')
+    }
+  }
+
   const onFiles = (event: ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(event.target.files ?? [])
     event.target.value = ''
@@ -125,7 +218,7 @@ export default function SubmissionWorkspace({ role }: { role: Role }) {
   }
 
   const beginReview = () => { setError(''); setSuccess(''); if (isComplete()) setReviewing(true) }
-  const discardDraft = () => { localStorage.removeItem(draftKey); attachments.forEach((attachment) => { if (attachment.previewUrl?.startsWith('blob:')) URL.revokeObjectURL(attachment.previewUrl) }); setForm(initialForm); setLocationData(null); setAttachments([]); setAttachmentFiles([]); setFileNotice(''); setDraftSavedAt(''); setReviewing(false); setError(''); setSuccess('') }
+  const discardDraft = () => { localStorage.removeItem(draftKey); attachments.forEach((attachment) => { if (attachment.previewUrl?.startsWith('blob:')) URL.revokeObjectURL(attachment.previewUrl) }); clearVoiceRecording(); setForm(initialForm); setLocationData(null); setAttachments([]); setAttachmentFiles([]); setFileNotice(''); setDraftSavedAt(''); setReviewing(false); setError(''); setSuccess('') }
 
   const submit = async () => {
     if (!isComplete()) { setReviewing(false); return }
@@ -136,7 +229,7 @@ export default function SubmissionWorkspace({ role }: { role: Role }) {
       void pollSavedAnalysis(created.id)
       attachments.forEach((attachment) => { if (attachment.previewUrl?.startsWith('blob:')) URL.revokeObjectURL(attachment.previewUrl) })
       localStorage.removeItem(draftKey)
-      setForm(initialForm); setAttachments([]); setAttachmentFiles([]); setLocationData(null); setReviewing(false); setDraftSavedAt(''); setIdempotencyKey(createIdempotencyKey()); setSuccess('Your report has been submitted. You can follow its status from your dashboard.')
+      clearVoiceRecording(); setForm(initialForm); setAttachments([]); setAttachmentFiles([]); setLocationData(null); setReviewing(false); setDraftSavedAt(''); setIdempotencyKey(createIdempotencyKey()); setSuccess('Your report has been submitted. You can follow its status from your dashboard.')
     } catch (error) { setError(submissionError(error)) }
     finally { setBusy(false) }
   }
@@ -159,8 +252,9 @@ export default function SubmissionWorkspace({ role }: { role: Role }) {
     <div className="submission-layout">
       <form className="submission-form" onSubmit={(event: FormEvent) => { event.preventDefault(); if (reviewing) void submit(); else beginReview() }}>
         <div className="submission-form-top"><div className="section-kicker">01 <strong>Tell us what is happening</strong></div>{draftSavedAt && <span className="draft-indicator">Draft saved on this device</span>}</div>
-        <label>Title<input value={form.title} onChange={(event) => update('title', event.target.value)} placeholder="For example: Streetlight is not working near the school" maxLength={120} required /><small>{form.title.length}/120 characters</small></label>
-        <label>Description<textarea value={form.description} onChange={(event) => update('description', event.target.value)} placeholder="Describe the issue, who it affects, and details that could help resolve it…" rows={6} minLength={20} maxLength={2000} required /><small>{form.description.length}/2000 characters · minimum 20</small></label>
+        <section className={`voice-report voice-report-${voiceState}`} aria-labelledby="voice-report-title"><div className="voice-report-heading"><span className="voice-icon" aria-hidden="true">●</span><div><h3 id="voice-report-title">Speak instead of typing</h3><p>Tell us what happened in your own language. CivicX will create the title and description for you.</p></div></div>{voiceState === 'idle' && <button type="button" className="voice-primary" onClick={() => void startVoiceRecording()}>Start voice recording</button>}{voiceState === 'requesting' && <p className="voice-status">Waiting for microphone permission…</p>}{voiceState === 'recording' && <div className="voice-active"><span className="voice-pulse" aria-hidden="true" /><strong>Recording · {Math.floor(voiceSeconds / 60)}:{String(voiceSeconds % 60).padStart(2, '0')}</strong><button type="button" onClick={stopVoiceRecording}>Stop recording</button></div>}{(voiceState === 'ready' || voiceState === 'processing') && voiceUrl && <div className="voice-preview"><audio controls src={voiceUrl}>Your browser cannot play this recording.</audio><div><button type="button" className="voice-primary" disabled={voiceState === 'processing'} onClick={() => void generateFromVoice()}>{voiceState === 'processing' ? 'Creating your report…' : voiceTranscript ? 'Generate again' : 'Create report from voice'}</button><button type="button" className="voice-secondary" disabled={voiceState === 'processing'} onClick={clearVoiceRecording}>Delete and re-record</button></div></div>}{voiceLanguage && <div className="voice-result" role="status"><strong>✓ Report created from {voiceLanguage}</strong><span>You can review or edit the generated details below.{voiceCategory ? ` Suggested category: ${voiceCategory.replace('_', ' ')}.` : ''}</span>{voiceTranscript && <details><summary>View transcript</summary><p>{voiceTranscript}</p></details>}</div>}<small>Maximum 2 minutes. The recording is processed securely and is not attached to your submitted report.</small></section>
+        <label>Title {voiceLanguage && <span className="generated-label">Generated from voice</span>}<input value={form.title} onChange={(event) => update('title', event.target.value)} placeholder="Record your voice above, or type a short title" maxLength={120} required /><small>{form.title.length}/120 characters</small></label>
+        <label>Description {voiceLanguage && <span className="generated-label">Generated from voice</span>}<textarea value={form.description} onChange={(event) => update('description', event.target.value)} placeholder="Record your voice above, or describe the issue here…" rows={6} minLength={20} maxLength={2000} required /><small>{form.description.length}/2000 characters · minimum 20</small></label>
         <p className="submission-auto-category">✦ CivicX will categorize this report automatically after submission. An administrator can correct it during review.</p>
         <LocationPicker value={locationData} onChange={setLocation} />
         <div className="submission-evidence"><div><p className="section-kicker">02 <strong>Add evidence <small>Optional</small></strong></p><p>Photos, videos, and documents help reviewers understand the issue.</p></div><label className="upload-zone"><input type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime,application/pdf,.doc,.docx" multiple onChange={onFiles} /><span className="upload-icon">+</span><span><strong>Attach photos, videos, or documents</strong><small>Up to 5 files · 100 MB each</small></span></label></div>
@@ -168,7 +262,7 @@ export default function SubmissionWorkspace({ role }: { role: Role }) {
         {attachments.length > 0 && <div className="attachment-list" aria-label="Selected files">{attachments.map((attachment) => <div className="attachment" key={attachment.id}>{attachment.previewUrl ? <img src={attachment.previewUrl} alt="" /> : <span className="file-icon">{attachment.type === 'application/pdf' ? 'PDF' : 'DOC'}</span>}<span><strong>{attachment.name}</strong><small>{formatFileSize(attachment.size)}</small></span><button type="button" onClick={() => removeFile(attachment.id)} aria-label={`Remove ${attachment.name}`}>×</button></div>)}</div>}
         {error && <p className="submission-error" role="alert">{error}</p>}{success && <p className="submission-success" role="status">✓ {success}</p>}
         {reviewing && <section className="submission-review" aria-live="polite"><div><p className="section-kicker">03 <strong>Ready to send?</strong></p><h3>Review your report</h3><p><strong>{form.title}</strong><br />{locationData?.address}<br />{attachments.length} attachment{attachments.length === 1 ? '' : 's'}</p></div><button type="button" className="review-edit" onClick={() => setReviewing(false)}>Keep editing</button></section>}
-        <div className="submission-actions"><button type="button" className="draft-clear" onClick={discardDraft} disabled={!form.title && !form.description && !locationData}>Clear draft</button><button className="submit-button" type="submit" disabled={busy}>{busy ? 'Submitting report…' : reviewing ? 'Confirm and submit' : 'Review report'} <span>→</span></button></div>
+        <div className="submission-actions"><button type="button" className="draft-clear" onClick={discardDraft} disabled={!form.title && !form.description && !locationData && !voiceBlob}>Clear draft</button><button className="submit-button" type="submit" disabled={busy || voiceState === 'recording' || voiceState === 'processing'}>{busy ? 'Submitting report…' : reviewing ? 'Confirm and submit' : 'Review report'} <span>→</span></button></div>
         <p className="submission-assurance">Your report is only sent when you select “Confirm and submit.” It is never submitted automatically.</p>
       </form>
     </div>

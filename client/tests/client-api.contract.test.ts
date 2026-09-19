@@ -3,7 +3,7 @@ import { request } from '../src/api/client'
 import { createIndustrySupportOffer, decideUniversityOffer, listIndustryOffers, listIndustryOpportunities, publishUniversityOpportunity } from '../src/api/industry.api'
 import { addProjectMember, addProjectRecord, advanceProjectStage, listAuthorizedProjects, listMilestoneEvidence, listMilestoneReviews, submitProjectProposal } from '../src/api/projects.api'
 import { decideUniversityAssignment, listUniversityAssignments } from '../src/api/university.api'
-import { getSubmissionDetail, replyToInformationRequest } from '../src/api/submissions.api'
+import { createVoiceReportDraft, getSubmissionDetail, replyToInformationRequest } from '../src/api/submissions.api'
 import { closeProject, getUniversityRecommendations, listProjectClosures, reopenProject, reviewAdminSubmission, reviewProjectProposal, routeSubmission } from '../src/api/admin.api'
 import { ApiError } from '../src/api/types'
 import { getUnreadNotificationCount, listNotifications, markAllNotificationsRead, markNotificationRead } from '../src/api/notifications.api'
@@ -85,6 +85,20 @@ describe('institutional client contracts', () => {
     vi.mocked(request).mockResolvedValueOnce({ success: true, data: { requestId: 'request-001', status: 'answered' } } as never)
     await replyToInformationRequest('submission-001', 'request-001', 'The repair is beside the school gate.')
     expect(vi.mocked(request)).toHaveBeenCalledWith('/submissions/submission-001/information-requests/request-001/reply', { method: 'POST', data: { answer: 'The repair is beside the school gate.' } })
+  })
+
+  it('sends a voice recording as a draft-only multipart request', async () => {
+    vi.mocked(request).mockResolvedValueOnce({ success: true, data: { transcript: 'A streetlight is broken.', languageCode: 'en-IN', languageName: 'English', title: 'Broken streetlight', description: 'The streetlight near the school is broken and the road is dark.', domain: 'infrastructure' } } as never)
+    const audio = new Blob(['voice-bytes'], { type: 'audio/webm' })
+
+    await createVoiceReportDraft(audio)
+
+    expect(vi.mocked(request)).toHaveBeenCalledOnce()
+    const [path, options] = vi.mocked(request).mock.calls[0]
+    expect(path).toBe('/submissions/voice-draft')
+    expect(options?.method).toBe('POST')
+    expect(options?.data).toBeInstanceOf(FormData)
+    expect((options?.data as FormData).get('audio')).toBeInstanceOf(File)
   })
 
   it('preserves the recommendation envelope returned by the admin contract', async () => {

@@ -12,6 +12,22 @@ export interface CreateSubmissionInput {
   idempotencyKey: string;
 }
 
+export interface VoiceReportDraft {
+  transcript: string;
+  languageCode: string;
+  languageName: string;
+  title: string;
+  description: string;
+  domain: string;
+}
+
+export async function createVoiceReportDraft(audio: Blob): Promise<VoiceReportDraft> {
+  const formData = new FormData();
+  const extension = audio.type.includes('ogg') ? 'ogg' : audio.type.includes('mp4') ? 'm4a' : 'webm';
+  formData.append('audio', audio, `voice-report.${extension}`);
+  return (await request<VoiceReportDraft>('/submissions/voice-draft', { method: 'POST', data: formData })).data;
+}
+
 export async function createSubmission(input: CreateSubmissionInput): Promise<Submission> {
   const formData = new FormData();
   formData.append('title', input.title);

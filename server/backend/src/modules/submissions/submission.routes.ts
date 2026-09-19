@@ -15,6 +15,8 @@ import { SubmissionActivity } from "./submission-activity.model";
 import { recordSubmissionActivity, serializePublicActivity } from "./submission-activity.service";
 import { classifyDeterministic, enqueueClassificationJob, getClassificationAnalysis } from "../classification/classification.service";
 import { Project } from "../projects/project.model";
+import { uploadVoiceRecording } from "./voice-upload.middleware";
+import { buildVoiceReportDraft } from "./voice-report.service";
 
 type UploadedAttachment = { id: string; name: string; type: string; size: number; previewUrl: string };
 
@@ -44,6 +46,12 @@ function serialize(submission: InstanceType<typeof Submission>) {
 
 router.post("/classify", validate(classifySubmissionSchema), (req, res) => {
   sendSuccess(res, { status: "completed", ...classifyDeterministic(req.body) });
+});
+
+router.post("/voice-draft", uploadVoiceRecording, async (req, res, next) => {
+  try {
+    sendSuccess(res, await buildVoiceReportDraft(req.file!));
+  } catch (error) { next(error); }
 });
 
 router.post("/", uploadAttachments, async (req, _res, next) => {

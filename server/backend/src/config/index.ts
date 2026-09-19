@@ -37,6 +37,8 @@ const config = {
   aiWorkerPollMs: parseInt(process.env.AI_WORKER_POLL_MS || "2000", 10),
   aiMaxAttempts: parseInt(process.env.AI_MAX_ATTEMPTS || "3", 10),
   aiLeaseMs: parseInt(process.env.AI_LEASE_MS || "30000", 10),
+  voiceTranscriptionModel: process.env.VOICE_TRANSCRIPTION_MODEL || "gemini-3.5-transcribe",
+  voiceMaxBytes: parseInt(process.env.VOICE_MAX_BYTES || String(15 * 1024 * 1024), 10),
 
   // CORS
   corsOrigins: [
