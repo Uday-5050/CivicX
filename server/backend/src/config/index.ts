@@ -10,7 +10,10 @@ function secret(name: string, fallback: string): string {
 }
 
 const config = {
-  port: parseInt(process.env.PORT || "5000", 10),
+  port: parseInt(
+    process.env.PORT || (process.env.NODE_ENV === "production" ? "10000" : "5000"),
+    10,
+  ),
   nodeEnv: process.env.NODE_ENV || "development",
   mongoUri:
     process.env.MONGO_URI ||
