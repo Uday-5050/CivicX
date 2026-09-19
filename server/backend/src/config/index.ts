@@ -39,9 +39,17 @@ const config = {
   aiLeaseMs: parseInt(process.env.AI_LEASE_MS || "30000", 10),
 
   // CORS
-  corsOrigins: (process.env.CORS_ORIGINS || "http://localhost:5173,http://127.0.0.1:5173")
-    .split(",")
-    .map((o) => o.trim()),
+  corsOrigins: [
+    ...(process.env.CORS_ORIGINS || "http://localhost:5173,http://127.0.0.1:5173")
+      .split(",")
+      .map((o) => o.trim())
+      .filter(Boolean),
+    // Render supplies this hostname automatically. Allow the service to load
+    // its own module scripts and styles without requiring a duplicated secret.
+    ...(process.env.RENDER_EXTERNAL_HOSTNAME
+      ? [`https://${process.env.RENDER_EXTERNAL_HOSTNAME}`]
+      : []),
+  ],
 
   // Derived
   isDev: (process.env.NODE_ENV || "development") === "development",
