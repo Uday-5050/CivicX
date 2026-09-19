@@ -26,10 +26,14 @@ import governmentRoutes from "./modules/government/government.routes";
 
 const app = express();
 
+const contentSecurityDirectives = helmet.contentSecurityPolicy.getDefaultDirectives();
+contentSecurityDirectives["connect-src"] = ["'self'", "https://nominatim.openstreetmap.org"];
+contentSecurityDirectives["img-src"] = ["'self'", "data:", "blob:", "https://*.tile.openstreetmap.org"];
+
 // ── Middleware chain (order matters) ──────────
 app.use(requestId);        // 1. Attach request ID
 app.use(httpLogger);       // 2. Structured request logging
-app.use(helmet());         // 3. Security headers
+app.use(helmet({ contentSecurityPolicy: { directives: contentSecurityDirectives } })); // 3. Security headers
 app.use(corsMiddleware);   // 4. CORS allowlist
 app.use(express.json({ limit: "1mb" }));  // 5. Parse JSON bodies
 app.use(express.urlencoded({ extended: true }));

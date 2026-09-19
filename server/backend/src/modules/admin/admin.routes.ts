@@ -68,7 +68,7 @@ async function applyModeration(input: z.infer<typeof reviewSchema>, submission: 
   if (decision === "marked_duplicate") { submission.disposition = "duplicate"; submission.duplicateOf = duplicateOf; }
   if (decision === "rejected") submission.disposition = "rejected";
   if (decision === "referred") submission.disposition = "referred";
-  if (input.category !== undefined) submission.analysis.category = input.category;
+  if (input.category !== undefined) { submission.analysis.category = input.category; submission.domain = input.category; }
   if (input.priority !== undefined) submission.analysis.priority = input.priority;
   submission.moderationUpdatedBy = new Types.ObjectId(req.auth!.userId);
   submission.moderationUpdatedAt = new Date();

@@ -26,9 +26,9 @@ interface LocationPickerProps {
   onChange: (location: LocationData | null) => void
 }
 
-/* Jharkhand center — default view */
-const JHARKHAND_CENTER: [number, number] = [23.61, 85.28]
-const DEFAULT_ZOOM = 7
+/* India-wide default; GPS or search moves to the citizen's exact area. */
+const INDIA_CENTER: [number, number] = [22.59, 78.96]
+const DEFAULT_ZOOM = 5
 const PLACED_ZOOM = 15
 
 /** Reverse-geocode using free Nominatim API */
@@ -101,7 +101,7 @@ export default function LocationPicker({ value, onChange }: LocationPickerProps)
     if (!mapRef.current || leafletMap.current) return
 
     const map = L.map(mapRef.current, {
-      center: value ? [value.lat, value.lng] : JHARKHAND_CENTER,
+      center: value ? [value.lat, value.lng] : INDIA_CENTER,
       zoom: value ? PLACED_ZOOM : DEFAULT_ZOOM,
       zoomControl: true,
       attributionControl: true,
@@ -175,7 +175,7 @@ export default function LocationPicker({ value, onChange }: LocationPickerProps)
       leafletMap.current.removeLayer(markerRef.current)
       markerRef.current = null
     }
-    leafletMap.current?.flyTo(JHARKHAND_CENTER, DEFAULT_ZOOM, { duration: 0.5 })
+    leafletMap.current?.flyTo(INDIA_CENTER, DEFAULT_ZOOM, { duration: 0.5 })
     onChange(null)
     setSearch('')
     setHintVisible(true)

@@ -64,7 +64,7 @@ export async function processClassificationJob(jobId: string, workerId = "inline
     } }, { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: true });
     claimed.status = "completed"; claimed.provider = savedResult.provider; claimed.resultId = savedResult.resultId; claimed.completedAt = new Date(); claimed.leaseUntil = undefined; claimed.lockedBy = undefined;
     await claimed.save();
-    await Submission.updateOne({ _id: submission._id }, { $set: { analysis: { status: savedResult.provider === "rules-fallback" ? "fallback" : "completed", category: savedResult.category, priority: savedResult.priority, summary: savedResult.summary, provider: savedResult.provider, revision: savedResult.revision, ...(fallbackReason ? { error: "Remote analysis unavailable; local rules were used." } : {}) } } });
+    await Submission.updateOne({ _id: submission._id }, { $set: { domain: savedResult.category, analysis: { status: savedResult.provider === "rules-fallback" ? "fallback" : "completed", category: savedResult.category, priority: savedResult.priority, summary: savedResult.summary, provider: savedResult.provider, revision: savedResult.revision, ...(fallbackReason ? { error: "Remote analysis unavailable; local rules were used." } : {}) } } });
     return claimed;
   } catch (error) { return failJob(claimed, error); }
 }

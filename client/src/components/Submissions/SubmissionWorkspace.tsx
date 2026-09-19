@@ -7,26 +7,14 @@ import LocationPicker from '../LocationPicker/LocationPicker'
 import type { LocationData } from '../LocationPicker/LocationPicker'
 import './SubmissionWorkspace.css'
 
-type FormState = { title: string; description: string; domain: string; location: string }
+type FormState = { title: string; description: string; location: string }
 type SavedDraft = { form: FormState; locationData: LocationData | null; attachmentNames?: string[]; savedAt: string }
 
-const initialForm: FormState = { title: '', description: '', domain: 'safety', location: '' }
-const domains = [
-  { value: 'infrastructure', label: 'Infrastructure' },
-  { value: 'safety', label: 'Public safety' },
-  { value: 'environment', label: 'Environment' },
-  { value: 'transportation', label: 'Roads and transport' },
-  { value: 'community', label: 'Community services' },
-  { value: 'education', label: 'Education' },
-  { value: 'health', label: 'Health' },
-  { value: 'governance', label: 'Governance' },
-  { value: 'other', label: 'Other' },
-]
+const initialForm: FormState = { title: '', description: '', location: '' }
 const maxFiles = 5
 const maxFileSize = 100 * 1024 * 1024
 const acceptedFileTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm', 'video/quicktime', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'])
 const draftKey = 'civicx:submission-draft:v1'
-const legacyDomainMap: Record<string, string> = { 'Public safety': 'safety', 'Roads and transport': 'transportation', 'Water and sanitation': 'infrastructure', 'Health and education': 'health', Environment: 'environment', Other: 'other' }
 
 function submissionError(error: unknown): string {
   if (error instanceof ApiError && error.statusCode === 401) return 'Your session is missing or expired. Please sign in again before submitting. Your form data is still here.'
@@ -64,7 +52,7 @@ export default function SubmissionWorkspace({ role }: { role: Role }) {
       try {
         const next = await getSubmissionAnalysis(submissionId)
         if (!mounted.current) return
-        setSubmissions((current) => current.map((item) => item.id === submissionId ? { ...item, analysis: next } : item))
+        setSubmissions((current) => current.map((item) => item.id === submissionId ? { ...item, domain: next.category ?? item.domain, analysis: next } : item))
         if (['completed', 'fallback', 'failed'].includes(next.status)) return
       } catch { return }
     }
@@ -77,8 +65,7 @@ export default function SubmissionWorkspace({ role }: { role: Role }) {
       if (saved) {
         const draft = JSON.parse(saved) as SavedDraft
         if (draft?.form && typeof draft.form.title === 'string') {
-          const restoredForm = { ...initialForm, ...draft.form }
-          setForm({ ...restoredForm, domain: legacyDomainMap[restoredForm.domain] ?? restoredForm.domain })
+          setForm({ title: draft.form.title, description: draft.form.description ?? '', location: draft.form.location ?? '' })
           setLocationData(draft.locationData ?? null)
           setDraftSavedAt(draft.savedAt ?? '')
           if (draft.attachmentNames?.length) setFileNotice(`Draft restored. Re-select these attachments before submitting: ${draft.attachmentNames.join(', ')}.`)
@@ -144,7 +131,7 @@ export default function SubmissionWorkspace({ role }: { role: Role }) {
     if (!isComplete()) { setReviewing(false); return }
     setError(''); setSuccess(''); setBusy(true)
     try {
-      const created = await createSubmission({ ...form, location: locationData!.address, submitterType: role, attachments, files: attachmentFiles, idempotencyKey })
+      const created = await createSubmission({ ...form, domain: 'Unclassified', location: locationData!.address, submitterType: role, attachments, files: attachmentFiles, idempotencyKey })
       setSubmissions((current) => [created, ...current.filter((submission) => submission.id !== created.id)])
       void pollSavedAnalysis(created.id)
       attachments.forEach((attachment) => { if (attachment.previewUrl?.startsWith('blob:')) URL.revokeObjectURL(attachment.previewUrl) })
@@ -174,7 +161,7 @@ export default function SubmissionWorkspace({ role }: { role: Role }) {
         <div className="submission-form-top"><div className="section-kicker">01 <strong>Tell us what is happening</strong></div>{draftSavedAt && <span className="draft-indicator">Draft saved on this device</span>}</div>
         <label>Title<input value={form.title} onChange={(event) => update('title', event.target.value)} placeholder="For example: Streetlight is not working near the school" maxLength={120} required /><small>{form.title.length}/120 characters</small></label>
         <label>Description<textarea value={form.description} onChange={(event) => update('description', event.target.value)} placeholder="Describe the issue, who it affects, and details that could help resolve it…" rows={6} minLength={20} maxLength={2000} required /><small>{form.description.length}/2000 characters · minimum 20</small></label>
-        <div className="submission-fields"><label>Category<select value={form.domain} onChange={(event) => update('domain', event.target.value)}>{domains.map((domain) => <option key={domain.value} value={domain.value}>{domain.label}</option>)}</select></label></div>
+        <p className="submission-auto-category">✦ CivicX will categorize this report automatically after submission. An administrator can correct it during review.</p>
         <LocationPicker value={locationData} onChange={setLocation} />
         <div className="submission-evidence"><div><p className="section-kicker">02 <strong>Add evidence <small>Optional</small></strong></p><p>Photos, videos, and documents help reviewers understand the issue.</p></div><label className="upload-zone"><input type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime,application/pdf,.doc,.docx" multiple onChange={onFiles} /><span className="upload-icon">+</span><span><strong>Attach photos, videos, or documents</strong><small>Up to 5 files · 100 MB each</small></span></label></div>
         {fileNotice && <p className="submission-file-notice" role="status">{fileNotice}</p>}

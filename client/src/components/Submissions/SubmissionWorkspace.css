@@ -13,6 +13,7 @@
 .submission-form input:focus, .submission-form textarea:focus, .submission-form select:focus, .comment-box input:focus { border-color: #1a5bc4; box-shadow: 0 0 0 3px rgba(26, 91, 196, .12); }
 .submission-form label > small { align-self: end; color: #94a3b8; font-size: 11px; font-weight: 400; }
 .submission-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.submission-auto-category { margin: -2px 0 0; padding: 11px 13px; border: 1px solid #dce9f7; border-radius: 6px; color: #48647f; background: #f5f9fd; font-size: 12px; line-height: 1.5; }
 .upload-zone { display: flex; align-items: center; justify-content: center; min-height: 120px; padding: 20px; border: 1px dashed #a9bfd2; border-radius: 4px; background: #f8fbfd; text-align: center; cursor: pointer; }
 .upload-zone input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .upload-zone:hover { border-color: #1a5bc4; background: #f1f7fc; }

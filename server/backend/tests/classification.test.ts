@@ -65,6 +65,7 @@ describe("Durable classification", () => {
     expect(result?.category).toBe("Infrastructure");
     expect(result?.priority).toBe("high");
     expect(updated?.analysis.status).toBe("completed");
+    expect(updated?.domain).toBe("Infrastructure");
     expect(await ClassificationResult.countDocuments({ submissionId: report._id })).toBe(1);
 
     await processClassificationJob(first.record.jobId);
