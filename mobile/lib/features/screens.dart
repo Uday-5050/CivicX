@@ -11,6 +11,8 @@ import '../core/localization/app_language.dart';
 import '../core/models/models.dart';
 import '../core/storage/draft_store.dart';
 import 'auth/auth_controller.dart';
+import 'problems/voice/voice_report_controller.dart';
+import 'problems/voice/voice_report_section.dart';
 
 final draftStoreProvider = Provider<DraftStore>((_) => DraftStore());
 final problemsProvider = FutureProvider.autoDispose<List<Problem>>(
@@ -328,7 +330,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
   final title = TextEditingController();
   final description = TextEditingController();
   final location = TextEditingController();
-  String domain = 'Public safety';
+  String domain = 'unclassified';
   Position? position;
   List<String> attachments = [];
   bool busy = false;
@@ -483,6 +485,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
           location: location.text.trim(),
           attachmentPaths: attachments,
           idempotencyKey: submissionKey);
+      await ref.read(voiceReportControllerProvider).deleteRecording();
       if (savedDraftId != null) {
         await ref.read(draftStoreProvider).delete(savedDraftId!);
       }
@@ -514,6 +517,18 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                     'ड्राफ़्ट सहेजें'))
           ]),
       body: ListView(padding: const EdgeInsets.all(20), children: [
+        VoiceReportSection(
+          hindi: ref.watch(appLanguageProvider) == AppLanguage.hindi,
+          onGenerated: (draft) {
+            setState(() {
+              title.text = draft.title;
+              description.text = draft.description;
+              domain = draft.domain;
+            });
+            saveDraft();
+          },
+        ),
+        const SizedBox(height: 16),
         TextField(
             controller: title,
             maxLength: 120,
@@ -534,23 +549,25 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                 labelText: localized(ref.watch(appLanguageProvider),
                     'Describe what is happening', 'क्या हो रहा है, बताएँ'))),
         const SizedBox(height: 12),
-        DropdownButtonFormField<String>(
-            initialValue: domain,
-            decoration: InputDecoration(
-                labelText: localized(
-                    ref.watch(appLanguageProvider), 'Domain', 'क्षेत्र')),
-            items: const [
-              'Public safety',
-              'Roads and transport',
-              'Water and sanitation',
-              'Health and education',
-              'Environment',
-              'Other'
-            ]
-                .map((value) =>
-                    DropdownMenuItem(value: value, child: Text(value)))
-                .toList(),
-            onChanged: (value) => setState(() => domain = value ?? domain)),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(12)),
+          child: Row(children: [
+            const Icon(Icons.auto_awesome_outlined, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+                child: Text(localized(
+                    ref.watch(appLanguageProvider),
+                    domain == 'unclassified'
+                        ? 'CivicX will categorize this report automatically.'
+                        : 'Suggested category: ${domain.replaceAll('_', ' ')}. An administrator can correct it.',
+                    domain == 'unclassified'
+                        ? 'CivicX इस रिपोर्ट की श्रेणी अपने आप तय करेगा।'
+                        : 'सुझाई गई श्रेणी: ${domain.replaceAll('_', ' ')}। प्रशासक इसे सुधार सकता है।'))),
+          ]),
+        ),
         const SizedBox(height: 12),
         TextField(
           decoration: InputDecoration(

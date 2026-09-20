@@ -163,3 +163,31 @@ class Draft {
         updatedAt: DateTime.tryParse('${json['updatedAt'] ?? ''}'),
       );
 }
+
+class VoiceReportDraft {
+  const VoiceReportDraft({
+    required this.transcript,
+    required this.languageCode,
+    required this.languageName,
+    required this.title,
+    required this.description,
+    required this.domain,
+  });
+
+  final String transcript;
+  final String languageCode;
+  final String languageName;
+  final String title;
+  final String description;
+  final String domain;
+
+  factory VoiceReportDraft.fromJson(Map<String, dynamic> json) =>
+      VoiceReportDraft(
+        transcript: '${json['transcript'] ?? ''}',
+        languageCode: '${json['languageCode'] ?? ''}',
+        languageName: '${json['languageName'] ?? ''}',
+        title: '${json['title'] ?? ''}',
+        description: '${json['description'] ?? ''}',
+        domain: '${json['domain'] ?? 'other'}',
+      );
+}

@@ -37,4 +37,20 @@ void main() {
     expect(restored.description, draft.description);
     expect(restored.districtId, 'ranchi');
   });
+
+  test('voice report draft preserves multilingual generated content', () {
+    final draft = VoiceReportDraft.fromJson({
+      'transcript': 'हमारे क्षेत्र में पानी नहीं आ रहा है।',
+      'languageCode': 'hi-IN',
+      'languageName': 'Hindi',
+      'title': 'क्षेत्र में पानी की समस्या',
+      'description': 'हमारे क्षेत्र में दो दिनों से पानी नहीं आ रहा है।',
+      'domain': 'infrastructure',
+    });
+
+    expect(draft.languageCode, 'hi-IN');
+    expect(draft.title, 'क्षेत्र में पानी की समस्या');
+    expect(draft.description, contains('दो दिनों'));
+    expect(draft.domain, 'infrastructure');
+  });
 }

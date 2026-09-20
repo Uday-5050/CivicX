@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/models/models.dart';
@@ -51,7 +52,6 @@ class AuthController extends StateNotifier<AuthState> {
   }
 
   Future<bool> login(String email, String password) async {
-    state = const AuthState(status: AuthStatus.checking);
     try {
       final user = await _api.login(email, password);
       state = AuthState(status: AuthStatus.signedIn, user: user);
@@ -76,6 +76,23 @@ class AuthController extends StateNotifier<AuthState> {
     state = const AuthState(status: AuthStatus.signedOut);
   }
 
-  String _message(Object error) =>
-      error.toString().replaceFirst('Exception: ', '');
+  String _message(Object error) {
+    if (error is DioException) {
+      final body = error.response?.data;
+      final backendMessage = body is Map
+          ? ((body['error'] as Map?)?['message'] ?? body['message'])
+          : null;
+      if (backendMessage != null) return backendMessage.toString();
+      final status = error.response?.statusCode;
+      if (status == 404 || status == 502 || status == 503) {
+        return 'The CivicX server is temporarily unavailable. Please try again shortly.';
+      }
+      if (error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.receiveTimeout ||
+          error.type == DioExceptionType.connectionError) {
+        return 'Could not reach CivicX. Check your internet connection and try again.';
+      }
+    }
+    return error.toString().replaceFirst('Exception: ', '');
+  }
 }

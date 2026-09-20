@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path/path.dart' as path;
+import 'package:http_parser/http_parser.dart';
 
 import '../config/app_config.dart';
 import '../models/models.dart';
@@ -114,6 +115,21 @@ class ApiClient {
           'attachments': files,
         }));
     return Problem.fromJson(
+        Map<String, dynamic>.from(response.data['data'] as Map));
+  }
+
+  Future<VoiceReportDraft> createVoiceReportDraft(String audioPath) async {
+    final response = await dio.post('/submissions/voice-draft',
+        data: FormData.fromMap({
+          'audio': await MultipartFile.fromFile(audioPath,
+              filename: 'voice-report.m4a',
+              contentType: MediaType('audio', 'mp4')),
+        }),
+        options: Options(
+          sendTimeout: const Duration(minutes: 2),
+          receiveTimeout: const Duration(minutes: 3),
+        ));
+    return VoiceReportDraft.fromJson(
         Map<String, dynamic>.from(response.data['data'] as Map));
   }
 }
