@@ -28,7 +28,7 @@ const app = express();
 
 const contentSecurityDirectives = helmet.contentSecurityPolicy.getDefaultDirectives();
 contentSecurityDirectives["connect-src"] = ["'self'", "https://nominatim.openstreetmap.org"];
-contentSecurityDirectives["img-src"] = ["'self'", "data:", "blob:", "https://*.tile.openstreetmap.org"];
+contentSecurityDirectives["img-src"] = ["'self'", "data:", "blob:", "https://server.arcgisonline.com"];
 
 // ── Middleware chain (order matters) ──────────
 app.use(requestId);        // 1. Attach request ID

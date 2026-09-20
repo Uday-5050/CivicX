@@ -107,10 +107,16 @@ export default function LocationPicker({ value, onChange }: LocationPickerProps)
       attributionControl: true,
     })
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-      maxZoom: 19,
-    }).addTo(map)
+    // The volunteer-run OpenStreetMap tile servers block production apps that
+    // exceed their public tile policy. Use Esri's hosted street basemap while
+    // keeping Nominatim only for address search and reverse geocoding.
+    L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+      {
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, and contributors',
+        maxZoom: 19,
+      }
+    ).addTo(map)
 
     /* Click on map to place marker */
     map.on('click', (e: L.LeafletMouseEvent) => {
