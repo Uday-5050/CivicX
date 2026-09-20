@@ -61,14 +61,25 @@ class VoiceReportSection extends ConsumerWidget {
               Expanded(
                   child: Text(
                       '${_text('Recording', 'रिकॉर्डिंग')} · ${_duration(state.elapsed)} / 2:00',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontWeight: FontWeight.w700))),
-              FilledButton.tonalIcon(
-                onPressed: controller.stop,
-                icon: const Icon(Icons.stop),
-                label: Text(_text('Stop', 'रोकें')),
-              ),
             ]),
-            const LinearProgressIndicator(),
+            const SizedBox(height: 12),
+            LinearProgressIndicator(
+              value: (state.elapsed.inMilliseconds /
+                      VoiceReportController.maximumDuration.inMilliseconds)
+                  .clamp(0.0, 1.0),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: controller.stop,
+                icon: const Icon(Icons.stop_circle_outlined),
+                label: Text(_text('Stop recording', 'रिकॉर्डिंग रोकें')),
+              ),
+            ),
           ] else if (!hasRecording) ...[
             FilledButton.icon(
               onPressed: state.phase == VoiceReportPhase.requestingPermission
